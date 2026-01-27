@@ -1,0 +1,32 @@
+# Example Configuration
+# Kopieren Sie diese Datei zu local.properties und fügen Sie Ihre echten API-Schlüssel ein
+# WARNUNG: Committen Sie local.properties NIEMALS zu Git!
+
+# News API Configuration
+# Holen Sie sich einen kostenlosen Schlüssel von https://newsapi.org
+news.api.key=YOUR_NEWS_API_KEY_HERE
+
+# OpenRouter API Configuration
+# Holen Sie sich einen Schlüssel von https://openrouter.ai
+openrouter.api.key=YOUR_OPENROUTER_API_KEY_HERE
+
+# Optional: Custom Credibility API
+# Konfigurieren Sie Ihre eigene Glaubwürdigkeitsprüfungs-API
+#credibility.api.url=https://your-credibility-api.com/
+#credibility.api.key=YOUR_CREDIBILITY_API_KEY_HERE
+
+# App Configuration
+# Diese Werte können auch in der App-UI konfiguriert werden
+update.interval.minutes=60
+enable.notifications=true
+enable.auto.summary=true
+enable.credibility.check=true
+max.articles.per.update=10
+
+# News Preferences
+news.country=de
+news.language=de
+
+# Advanced Settings
+# Uncomment to enable debug logging
+#debug.logging=true
