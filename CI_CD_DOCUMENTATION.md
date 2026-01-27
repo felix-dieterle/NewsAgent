@@ -111,16 +111,16 @@ Currently, the APK is built without signing (unsigned release APK). For producti
    ```kotlin
    android {
        signingConfigs {
-           release {
-               storeFile file(System.getenv("KEYSTORE_FILE") ?: "path/to/keystore")
-               storePassword System.getenv("KEYSTORE_PASSWORD")
-               keyAlias System.getenv("KEY_ALIAS")
-               keyPassword System.getenv("KEY_PASSWORD")
+           create("release") {
+               storeFile = file(System.getenv("KEYSTORE_FILE") ?: "path/to/keystore")
+               storePassword = System.getenv("KEYSTORE_PASSWORD")
+               keyAlias = System.getenv("KEY_ALIAS")
+               keyPassword = System.getenv("KEY_PASSWORD")
            }
        }
        buildTypes {
-           release {
-               signingConfig signingConfigs.release
+           getByName("release") {
+               signingConfig = signingConfigs.getByName("release")
                // ...
            }
        }
