@@ -82,6 +82,15 @@ cd NewsAgent
 ./gradlew installDebug
 ```
 
+### CI/CD Pipeline
+
+Das Projekt verwendet GitHub Actions für automatisches Bauen und Veröffentlichen:
+
+- **CI (Continuous Integration):** Automatische Builds und Tests bei jedem Pull Request
+- **CD (Continuous Deployment):** Automatische APK-Releases bei jedem Merge in `main`
+
+Weitere Details finden Sie in [CI_CD_DOCUMENTATION.md](CI_CD_DOCUMENTATION.md).
+
 ## Verwendung
 
 ### Erste Schritte
