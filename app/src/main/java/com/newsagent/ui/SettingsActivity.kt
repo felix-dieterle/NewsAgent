@@ -26,7 +26,37 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(16, 16, 16, 16)
         }
         
-        // News API Token (unified for NewsAPI.org and GNews)
+        // News Source Selection
+        layout.addView(TextView(this).apply {
+            text = "Nachrichtenquelle"
+            textSize = 18f
+            setPadding(0, 16, 0, 8)
+        })
+        
+        val newsSourceSpinner = Spinner(this).apply {
+            val sources = arrayOf("NewsAPI.org", "GNews.io", "RSS Feeds (kostenlos)")
+            val adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_spinner_item, sources)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setAdapter(adapter)
+            
+            // Set current selection
+            val currentSource = prefs.getString("news_source", "newsapi") ?: "newsapi"
+            selection = when (currentSource) {
+                "gnews" -> 1
+                "rss" -> 2
+                else -> 0
+            }
+        }
+        layout.addView(newsSourceSpinner)
+        
+        layout.addView(TextView(this).apply {
+            text = "Wählen Sie Ihre bevorzugte Nachrichtenquelle"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 16)
+        })
+        
+        // News API Token
         layout.addView(TextView(this).apply {
             text = "News API Token"
             textSize = 18f
@@ -34,13 +64,13 @@ class SettingsActivity : AppCompatActivity() {
         })
         
         val newsApiTokenInput = EditText(this).apply {
-            hint = "Geben Sie Ihren News API Token ein"
+            hint = "Token für die gewählte Quelle (nicht für RSS benötigt)"
             setText(prefs.getString("news_api_token", ""))
         }
         layout.addView(newsApiTokenInput)
         
         layout.addView(TextView(this).apply {
-            text = "NewsAPI.org oder GNews.io - beide kostenlos verfügbar"
+            text = "NewsAPI.org oder GNews.io - holen Sie Token von der gewählten Quelle"
             textSize = 12f
             setTextColor(0xFF666666.toInt())
             setPadding(0, 4, 0, 16)
@@ -169,9 +199,15 @@ class SettingsActivity : AppCompatActivity() {
             text = "Einstellungen speichern"
             setPadding(0, 32, 0, 0)
             setOnClickListener {
+                val selectedSource = when (newsSourceSpinner.selectedItemPosition) {
+                    1 -> "gnews"
+                    2 -> "rss"
+                    else -> "newsapi"
+                }
                 saveSettings(
                     newsApiTokenInput.text.toString(),
                     aiApiTokenInput.text.toString(),
+                    selectedSource,
                     intervalInput.text.toString().toIntOrNull() ?: 60,
                     notificationsCheckbox.isChecked,
                     autoSummaryCheckbox.isChecked,
@@ -190,6 +226,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun saveSettings(
         newsApiToken: String,
         aiApiToken: String,
+        newsSource: String,
         intervalMinutes: Int,
         enableNotifications: Boolean,
         enableAutoSummary: Boolean,
@@ -199,11 +236,24 @@ class SettingsActivity : AppCompatActivity() {
         Logger.d("SettingsActivity", "Saving settings...")
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         prefs.edit().apply {
-            // Save unified news API token (can be used for NewsAPI.org or GNews)
-            putString("news_api_token", newsApiToken)
-            // Also save to legacy keys for backward compatibility
-            putString("news_api_key", newsApiToken)
-            putString("gnews_api_token", newsApiToken)
+            // Save news source selection
+            putString("news_source", newsSource)
+            
+            // Save token based on selected source
+            when (newsSource) {
+                "newsapi" -> {
+                    putString("news_api_key", newsApiToken)
+                    putString("news_api_token", newsApiToken)
+                }
+                "gnews" -> {
+                    putString("gnews_api_token", newsApiToken)
+                    putString("news_api_token", newsApiToken)
+                }
+                "rss" -> {
+                    // RSS doesn't need a token, but store the selection
+                    putString("news_api_token", "")
+                }
+            }
             
             putString("openrouter_api_key", aiApiToken)
             putInt("update_interval_minutes", intervalMinutes)
@@ -212,6 +262,7 @@ class SettingsActivity : AppCompatActivity() {
             putBoolean("enable_credibility_check", enableCredibilityCheck)
             putInt("max_articles", maxArticles)
             apply()
+        }
         }
         
         Logger.i("SettingsActivity", "Settings saved: interval=$intervalMinutes, notifications=$enableNotifications")
