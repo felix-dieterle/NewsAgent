@@ -3,29 +3,36 @@ package com.newsagent.services
 import android.content.Context
 import android.content.SharedPreferences
 import com.newsagent.api.*
+import com.newsagent.cache.CacheManager
 import com.newsagent.models.CredibilityScore
 import com.newsagent.models.NewsArticle
+import com.newsagent.utils.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 /**
  * Service for checking news credibility
+ * Implements caching to avoid redundant checks
  */
 class CredibilityCheckService(private val context: Context) {
     
     private val prefs: SharedPreferences = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
+    private val cacheManager = CacheManager.getInstance()
     
     private val credibilityApi: CredibilityApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
         }
         
         val client = OkHttpClient.Builder()
             .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .build()
         
         // This is a placeholder URL - replace with actual credibility checking API
@@ -42,39 +49,61 @@ class CredibilityCheckService(private val context: Context) {
     /**
      * Check credibility of a news article
      * If API is not available, performs basic heuristic checks
+     * Uses cache to avoid redundant checks
      */
     suspend fun checkCredibility(article: NewsArticle): CredibilityScore = withContext(Dispatchers.IO) {
         try {
+            // Check cache first using article URL as stable identifier
+            val cacheKey = article.url.hashCode().toString()
+            cacheManager.getCachedCredibility(cacheKey)?.let { cached ->
+                Logger.d("CredibilityCheckService", "Returning cached credibility for: ${article.title}")
+                return@withContext cached
+            }
+            
+            Logger.d("CredibilityCheckService", "Checking credibility for: ${article.title}")
+            
             val apiUrl = prefs.getString("credibility_api_url", "")
             
-            if (apiUrl.isNullOrEmpty()) {
+            val score = if (apiUrl.isNullOrEmpty()) {
                 // Fallback to basic heuristic checks
-                return@withContext performBasicCredibilityCheck(article)
-            }
-            
-            val request = CredibilityRequest(
-                title = article.title,
-                content = article.content ?: article.description ?: "",
-                source = article.source,
-                url = article.url
-            )
-            
-            val response = credibilityApi.checkCredibility(request)
-            
-            if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
-                CredibilityScore(
-                    articleId = article.id,
-                    score = body.score,
-                    factors = body.factors,
-                    verified = body.verified,
-                    concerns = body.concerns,
-                    checkedAt = System.currentTimeMillis()
-                )
-            } else {
                 performBasicCredibilityCheck(article)
+            } else {
+                try {
+                    val request = CredibilityRequest(
+                        title = article.title,
+                        content = article.content ?: article.description ?: "",
+                        source = article.source,
+                        url = article.url
+                    )
+                    
+                    val response = credibilityApi.checkCredibility(request)
+                    
+                    if (response.isSuccessful && response.body() != null) {
+                        val body = response.body()!!
+                        CredibilityScore(
+                            articleId = article.id,
+                            score = body.score,
+                            factors = body.factors,
+                            verified = body.verified,
+                            concerns = body.concerns,
+                            checkedAt = System.currentTimeMillis()
+                        )
+                    } else {
+                        performBasicCredibilityCheck(article)
+                    }
+                } catch (e: Exception) {
+                    Logger.w("CredibilityCheckService", "API check failed, using heuristic", e)
+                    performBasicCredibilityCheck(article)
+                }
             }
+            
+            // Cache the result
+            cacheManager.cacheCredibility(cacheKey, score)
+            Logger.i("CredibilityCheckService", "Credibility checked and cached")
+            
+            score
         } catch (e: Exception) {
+            Logger.e("CredibilityCheckService", "Exception checking credibility", e)
             e.printStackTrace()
             performBasicCredibilityCheck(article)
         }

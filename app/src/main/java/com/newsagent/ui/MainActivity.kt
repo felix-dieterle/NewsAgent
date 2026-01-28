@@ -15,6 +15,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.newsagent.models.NewsArticle
 import com.newsagent.services.*
 import com.newsagent.utils.Logger
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /**
@@ -111,18 +112,8 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                // Process articles
-                for (article in newArticles) {
-                    val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                    
-                    if (prefs.getBoolean("enable_auto_summary", true)) {
-                        article.summary = aiSummaryService.generateSummary(article)
-                    }
-                    
-                    if (prefs.getBoolean("enable_credibility_check", true)) {
-                        article.credibilityScore = credibilityService.checkCredibility(article)
-                    }
-                }
+                // Process articles with parallel execution
+                processArticles(newArticles)
                 
                 articles.clear()
                 articles.addAll(newArticles)
@@ -241,21 +232,25 @@ class MainActivity : AppCompatActivity() {
     
     /**
      * Helper method to process articles with summaries and credibility checks
+     * Uses parallel processing for better performance
      */
     private suspend fun processArticles(articlesList: List<NewsArticle>) {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val enableSummary = prefs.getBoolean("enable_auto_summary", true)
         val enableCredibility = prefs.getBoolean("enable_credibility_check", true)
         
-        for (article in articlesList) {
-            if (enableSummary) {
-                article.summary = aiSummaryService.generateSummary(article)
+        // Process articles in parallel using coroutines for better performance
+        articlesList.map { article ->
+            lifecycleScope.async {
+                if (enableSummary) {
+                    article.summary = aiSummaryService.generateSummary(article)
+                }
+                
+                if (enableCredibility) {
+                    article.credibilityScore = credibilityService.checkCredibility(article)
+                }
             }
-            
-            if (enableCredibility) {
-                article.credibilityScore = credibilityService.checkCredibility(article)
-            }
-        }
+        }.forEach { it.await() }
     }
     
     private fun performFreeSearch(query: String) {
