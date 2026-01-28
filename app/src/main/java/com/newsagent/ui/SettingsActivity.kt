@@ -263,7 +263,6 @@ class SettingsActivity : AppCompatActivity() {
             putInt("max_articles", maxArticles)
             apply()
         }
-        }
         
         Logger.i("SettingsActivity", "Settings saved: interval=$intervalMinutes, notifications=$enableNotifications")
         
