@@ -12,12 +12,14 @@ import retrofit2.http.Query
 interface FreeNewsApi {
     
     /**
-     * Search news using GNews API (free tier - no API key required for basic usage)
+     * Search news using GNews API
      * Free tier: 100 requests per day
+     * Requires API token from gnews.io (free registration)
      */
     @GET("api/v4/search")
     suspend fun searchGNews(
         @Query("q") query: String,
+        @Query("token") apiToken: String,
         @Query("lang") language: String = "de",
         @Query("max") maxResults: Int = 10,
         @Query("country") country: String = "de"
@@ -25,9 +27,11 @@ interface FreeNewsApi {
     
     /**
      * Get top headlines using GNews API
+     * Requires API token from gnews.io (free registration)
      */
     @GET("api/v4/top-headlines")
     suspend fun getGNewsHeadlines(
+        @Query("token") apiToken: String,
         @Query("lang") language: String = "de",
         @Query("max") maxResults: Int = 10,
         @Query("country") country: String = "de"

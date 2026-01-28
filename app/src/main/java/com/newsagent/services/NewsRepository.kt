@@ -138,11 +138,17 @@ class NewsRepository(private val context: Context) {
     }
     
     /**
-     * Search for news using free GNews API (no API key required)
-     * This is a free alternative that doesn't require authentication
+     * Search for news using GNews API (free tier with simple registration)
+     * Requires gnews_api_token in preferences
      */
     suspend fun searchNewsFree(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
+            val apiToken = prefs.getString("gnews_api_token", "") ?: ""
+            if (apiToken.isEmpty()) {
+                Logger.w("NewsRepository", "GNews API token not configured")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
             val language = prefs.getString("language", "de") ?: "de"
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
@@ -151,6 +157,7 @@ class NewsRepository(private val context: Context) {
             
             val response = freeNewsApi.searchGNews(
                 query = query,
+                apiToken = apiToken,
                 language = language,
                 maxResults = pageSize,
                 country = country
@@ -172,11 +179,17 @@ class NewsRepository(private val context: Context) {
     }
     
     /**
-     * Fetch top headlines using free GNews API (no API key required)
-     * This is a free alternative that doesn't require authentication
+     * Fetch top headlines using GNews API (free tier with simple registration)
+     * Requires gnews_api_token in preferences
      */
     suspend fun fetchTopHeadlinesFree(): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
+            val apiToken = prefs.getString("gnews_api_token", "") ?: ""
+            if (apiToken.isEmpty()) {
+                Logger.w("NewsRepository", "GNews API token not configured")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
             val language = prefs.getString("language", "de") ?: "de"
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
@@ -184,6 +197,7 @@ class NewsRepository(private val context: Context) {
             Logger.d("NewsRepository", "Fetching free top headlines for country=$country, language=$language")
             
             val response = freeNewsApi.getGNewsHeadlines(
+                apiToken = apiToken,
                 language = language,
                 maxResults = pageSize,
                 country = country
@@ -227,18 +241,40 @@ class NewsRepository(private val context: Context) {
             Logger.d("NewsRepository", "Fetching RSS news from public feeds")
             val parser = RssFeedParser()
             val allArticles = mutableListOf<NewsArticle>()
+            val httpClient = OkHttpClient.Builder()
+                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+            
+            var successCount = 0
+            var failCount = 0
             
             // Fetch from multiple RSS feeds
             for ((sourceName, feedUrl) in RssFeedParser.GERMAN_RSS_FEEDS) {
                 try {
-                    val rssArticles = parser.parseRssFeed(feedUrl, sourceName)
-                    val newsArticles = rssArticles.map { convertFromRssArticle(it) }
-                    allArticles.addAll(newsArticles)
-                    Logger.d("NewsRepository", "Fetched ${newsArticles.size} articles from $sourceName")
+                    val request = okhttp3.Request.Builder()
+                        .url(feedUrl)
+                        .build()
+                    
+                    val response = httpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val xmlContent = response.body?.string() ?: continue
+                        val rssArticles = parser.parseRssContent(xmlContent, sourceName)
+                        val newsArticles = rssArticles.map { convertFromRssArticle(it) }
+                        allArticles.addAll(newsArticles)
+                        successCount++
+                        Logger.d("NewsRepository", "Fetched ${newsArticles.size} articles from $sourceName")
+                    } else {
+                        failCount++
+                        Logger.w("NewsRepository", "Failed to fetch from $sourceName: ${response.code}")
+                    }
                 } catch (e: Exception) {
-                    Logger.e("NewsRepository", "Failed to fetch from $sourceName", e)
+                    failCount++
+                    Logger.e("NewsRepository", "Exception fetching from $sourceName", e)
                 }
             }
+            
+            Logger.i("NewsRepository", "RSS fetch complete: $successCount succeeded, $failCount failed")
             
             val maxArticles = prefs.getInt("max_articles", 10)
             val limitedArticles = allArticles.take(maxArticles)

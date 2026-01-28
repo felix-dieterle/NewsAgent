@@ -1,11 +1,11 @@
 package com.newsagent.api
 
+import android.util.Log
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import java.io.StringReader
-import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -23,14 +23,14 @@ class RssFeedParser {
     )
     
     /**
-     * Parse RSS feed from a URL
+     * Parse RSS feed from XML content
+     * Note: Feed fetching should be done separately using proper HTTP client (e.g., OkHttp)
      */
-    fun parseRssFeed(feedUrl: String, sourceName: String): List<RssArticle> {
+    fun parseRssContent(xmlContent: String, sourceName: String): List<RssArticle> {
         return try {
-            val xmlContent = URL(feedUrl).readText()
             parseRssXml(xmlContent, sourceName)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("RssFeedParser", "Error parsing RSS content from $sourceName", e)
             emptyList()
         }
     }
@@ -43,6 +43,15 @@ class RssFeedParser {
         
         try {
             val factory = DocumentBuilderFactory.newInstance()
+            
+            // Security: Disable XXE (XML External Entity) attacks
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+            factory.isXIncludeAware = false
+            factory.isExpandEntityReferences = false
+            
             val builder = factory.newDocumentBuilder()
             val inputSource = InputSource(StringReader(xmlContent))
             val doc: Document = builder.parse(inputSource)
@@ -74,7 +83,7 @@ class RssFeedParser {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("RssFeedParser", "Error in parseRssXml for $sourceName", e)
         }
         
         return articles
@@ -93,9 +102,9 @@ class RssFeedParser {
         // Public German news RSS feeds that don't require authentication
         val GERMAN_RSS_FEEDS = mapOf(
             "Tagesschau" to "https://www.tagesschau.de/xml/rss2/",
-            "Heise Online" to "https://www.heise.de/rss/heise-atom.xml",
-            "Spiegel Online" to "https://www.spiegel.de/schlagzeilen/index.rss",
-            "Zeit Online" to "https://newsfeed.zeit.de/index"
+            "Heise Online" to "https://www.heise.de/rss/heise.rdf",  // Using RDF format instead of Atom
+            "Spiegel Online" to "https://www.spiegel.de/schlagzeilen/index.rss"
+            // Zeit Online feed removed as it may require special handling
         )
     }
 }

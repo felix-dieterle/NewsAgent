@@ -239,6 +239,25 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
     
+    /**
+     * Helper method to process articles with summaries and credibility checks
+     */
+    private suspend fun processArticles(articlesList: List<NewsArticle>) {
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+        val enableSummary = prefs.getBoolean("enable_auto_summary", true)
+        val enableCredibility = prefs.getBoolean("enable_credibility_check", true)
+        
+        for (article in articlesList) {
+            if (enableSummary) {
+                article.summary = aiSummaryService.generateSummary(article)
+            }
+            
+            if (enableCredibility) {
+                article.credibilityScore = credibilityService.checkCredibility(article)
+            }
+        }
+    }
+    
     private fun performFreeSearch(query: String) {
         lifecycleScope.launch {
             try {
@@ -263,17 +282,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 // Process articles
-                for (article in newArticles) {
-                    val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                    
-                    if (prefs.getBoolean("enable_auto_summary", true)) {
-                        article.summary = aiSummaryService.generateSummary(article)
-                    }
-                    
-                    if (prefs.getBoolean("enable_credibility_check", true)) {
-                        article.credibilityScore = credibilityService.checkCredibility(article)
-                    }
-                }
+                processArticles(newArticles)
                 
                 articles.clear()
                 articles.addAll(newArticles)
@@ -320,17 +329,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 // Process articles
-                for (article in newArticles) {
-                    val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                    
-                    if (prefs.getBoolean("enable_auto_summary", true)) {
-                        article.summary = aiSummaryService.generateSummary(article)
-                    }
-                    
-                    if (prefs.getBoolean("enable_credibility_check", true)) {
-                        article.credibilityScore = credibilityService.checkCredibility(article)
-                    }
-                }
+                processArticles(newArticles)
                 
                 articles.clear()
                 articles.addAll(newArticles)
@@ -377,17 +376,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 // Process articles
-                for (article in newArticles) {
-                    val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                    
-                    if (prefs.getBoolean("enable_auto_summary", true)) {
-                        article.summary = aiSummaryService.generateSummary(article)
-                    }
-                    
-                    if (prefs.getBoolean("enable_credibility_check", true)) {
-                        article.credibilityScore = credibilityService.checkCredibility(article)
-                    }
-                }
+                processArticles(newArticles)
                 
                 articles.clear()
                 articles.addAll(newArticles)
@@ -434,17 +423,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 // Process articles
-                for (article in newArticles) {
-                    val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                    
-                    if (prefs.getBoolean("enable_auto_summary", true)) {
-                        article.summary = aiSummaryService.generateSummary(article)
-                    }
-                    
-                    if (prefs.getBoolean("enable_credibility_check", true)) {
-                        article.credibilityScore = credibilityService.checkCredibility(article)
-                    }
-                }
+                processArticles(newArticles)
                 
                 articles.clear()
                 articles.addAll(newArticles)
