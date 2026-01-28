@@ -17,13 +17,52 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Debug signing config - uses default debug keystore
+        getByName("debug") {
+            // Android automatically uses the default debug keystore
+            // Located at: ~/.android/debug.keystore
+            // This is secure for development/testing builds
+        }
+        
+        // Release signing config - uses environment variables for CI/CD
+        create("release") {
+            // Check if signing environment variables are set
+            val keystorePath = System.getenv("KEYSTORE_FILE")
+            val keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+            val keyAlias = System.getenv("KEY_ALIAS")
+            val keyPassword = System.getenv("KEY_PASSWORD")
+            
+            if (keystorePath != null && keystorePassword != null && 
+                keyAlias != null && keyPassword != null) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            // Use debug signing config
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            
+            // Use release signing if available, otherwise fall back to debug
+            signingConfig = if (System.getenv("KEYSTORE_FILE") != null) {
+                signingConfigs.getByName("release")
+            } else {
+                // Fall back to debug signing if release keys not configured
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {
