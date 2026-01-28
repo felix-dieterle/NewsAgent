@@ -7,6 +7,7 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 ### ✨ Hauptfunktionen
 
 - **📰 Nachrichtenaggregation**: Automatisches Abrufen von Top-Schlagzeilen aus verschiedenen Quellen
+- **🆓 Kostenlose Nachrichtensuche**: Suchen Sie nach Nachrichten ohne API-Schlüssel mit GNews (100 Anfragen/Tag)
 - **🤖 KI-Zusammenfassungen**: Automatische Generierung von Zusammenfassungen mit OpenRouter (kostenlose/günstige KI-Modelle)
 - **🔊 Audio-Zusammenfassungen**: Text-to-Speech Unterstützung für das Anhören von Nachrichtenzusammenfassungen
 - **✅ Glaubwürdigkeitsprüfung**: API-Schnittstelle zur Überprüfung der Seriosität und Integrität von Nachrichten
@@ -31,6 +32,7 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 
 #### 🌐 API Interfaces (`api/`)
 - `NewsApi.kt` - Integration mit News API (newsapi.org)
+- `FreeNewsApi.kt` - Integration mit GNews API (kostenlos, kein API-Schlüssel erforderlich)
 - `OpenRouterApi.kt` - KI-Integration über OpenRouter
 - `CredibilityApi.kt` - Schnittstelle für Glaubwürdigkeitsprüfung
 
@@ -136,6 +138,12 @@ Weitere Details finden Sie in [CI_CD_DOCUMENTATION.md](CI_CD_DOCUMENTATION.md).
 - Hauptbildschirm zeigt aktuelle Nachrichten
 - Tippen Sie auf das Aktualisierungssymbol für manuelle Updates
 - Artikel werden mit Glaubwürdigkeitsbewertung angezeigt
+
+#### Kostenlose Nachrichtensuche
+- **Ohne API-Schlüssel**: Nutzen Sie die kostenlose Suchfunktion über das Menü "Kostenlose Suche"
+- **In der Suchleiste**: Verwenden Sie die Suchleiste im Menü zum Suchen nach Stichwörtern
+- **Unbegrenzt**: 100 kostenlose Suchanfragen pro Tag mit GNews API
+- **Keine Anmeldung**: Funktioniert ohne API-Schlüssel oder Registrierung
 
 #### Artikel-Details
 - Tippen Sie auf einen Artikel für Details

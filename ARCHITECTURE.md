@@ -197,8 +197,21 @@ language: String                  // News language filter
   - `/v2/top-headlines` - Get top news
   - `/v2/everything` - Search news
 - **Rate Limits**: 100 requests/day (free tier)
+- **Authentication**: API key required
 
-#### 2. OpenRouter (openrouter.ai)
+#### 2. GNews API (gnews.io) - Free Search
+- **Purpose**: Free news search without API key
+- **Endpoints**:
+  - `/api/v4/search` - Search news articles
+  - `/api/v4/top-headlines` - Get top headlines
+- **Rate Limits**: 100 requests/day (free tier)
+- **Authentication**: None required (free tier)
+- **Features**:
+  - Search by keyword
+  - Filter by language and country
+  - No registration needed
+
+#### 3. OpenRouter (openrouter.ai)
 - **Purpose**: AI text generation
 - **Endpoint**: `/api/v1/chat/completions`
 - **Models Used**: 
@@ -206,7 +219,7 @@ language: String                  // News language filter
   - Others configurable
 - **Authentication**: Bearer token
 
-#### 3. Credibility API (Custom)
+#### 4. Credibility API (Custom)
 - **Purpose**: Fact-checking and verification
 - **Endpoint**: `/api/v1/check`
 - **Fallback**: Heuristic checking if unavailable
