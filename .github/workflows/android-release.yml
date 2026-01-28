@@ -1,0 +1,72 @@
+name: Android Release
+
+# This workflow creates a release on every push to main.
+# To avoid duplicate version releases, increment versionCode/versionName 
+# in app/build.gradle.kts before merging to main.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --stacktrace
+      
+    - name: Get version name
+      id: version
+      run: |
+        VERSION_NAME=$(grep "versionName" app/build.gradle.kts | awk -F'"' '{print $2}')
+        VERSION_CODE=$(grep "versionCode" app/build.gradle.kts | awk -F'=' '{print $2}' | tr -d ' ')
+        echo "version_name=${VERSION_NAME}" >> $GITHUB_OUTPUT
+        echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
+        echo "Version: ${VERSION_NAME} (${VERSION_CODE})"
+        
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: app/build/outputs/apk/release/*.apk
+        
+    - name: Rename APK
+      run: |
+        mv app/build/outputs/apk/release/app-release-unsigned.apk \
+           app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-release.apk
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version_name }}-build${{ github.run_number }}
+        name: Release v${{ steps.version.outputs.version_name }} (Build ${{ github.run_number }})
+        draft: false
+        prerelease: false
+        body: |
+          ## NewsAgent v${{ steps.version.outputs.version_name }}
+          
+          Auto-generated release from commit ${{ github.sha }}
+          
+          ### Changes
+          See commit history for details.
+          
+          ### Download
+          - Release APK: See assets below
+        files: |
+          app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-release.apk

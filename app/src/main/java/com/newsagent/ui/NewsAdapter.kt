@@ -34,7 +34,7 @@ class NewsAdapter(
         }
         
         init {
-            (view as ViewGroup).apply {
+            (view as android.widget.LinearLayout).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
                 addView(title)
                 addView(source)
