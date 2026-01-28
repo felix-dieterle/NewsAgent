@@ -8,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.newsagent.services.NewsUpdateWorker
 import com.newsagent.utils.Logger
+import java.io.File
 
 /**
  * Activity for configuring app settings
