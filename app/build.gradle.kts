@@ -27,7 +27,7 @@ android {
         
         // Release signing config - uses environment variables for CI/CD
         create("release") {
-            // Check if signing environment variables are set
+            // Check if all required signing environment variables are set
             val keystorePath = System.getenv("KEYSTORE_FILE")
             val keystorePassword = System.getenv("KEYSTORE_PASSWORD")
             val keyAlias = System.getenv("KEY_ALIAS")
@@ -40,6 +40,8 @@ android {
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword
             }
+            // If not all variables are set, this config will be incomplete
+            // and the fallback logic in buildTypes.release will use debug signing instead
         }
     }
 
@@ -56,11 +58,16 @@ android {
                 "proguard-rules.pro"
             )
             
-            // Use release signing if available, otherwise fall back to debug
-            signingConfig = if (System.getenv("KEYSTORE_FILE") != null) {
+            // Use release signing if all required variables are available, otherwise fall back to debug
+            val hasAllSigningVars = System.getenv("KEYSTORE_FILE") != null &&
+                                    System.getenv("KEYSTORE_PASSWORD") != null &&
+                                    System.getenv("KEY_ALIAS") != null &&
+                                    System.getenv("KEY_PASSWORD") != null
+            
+            signingConfig = if (hasAllSigningVars) {
                 signingConfigs.getByName("release")
             } else {
-                // Fall back to debug signing if release keys not configured
+                // Fall back to debug signing if release keys not fully configured
                 signingConfigs.getByName("debug")
             }
         }

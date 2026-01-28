@@ -29,13 +29,22 @@ jobs:
       run: chmod +x gradlew
       
     - name: Decode Keystore (if provided)
-      if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
-        echo "KEYSTORE_FILE=release.keystore" >> $GITHUB_ENV
-        echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
-        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+        if [ -n "$KEYSTORE_BASE64" ]; then
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          echo "KEYSTORE_FILE=release.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
+          echo "KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
+          echo "Keystore configured for production signing"
+        else
+          echo "No keystore configured, will use debug signing"
+        fi
       
     - name: Build Release APK
       run: ./gradlew assembleRelease --stacktrace
@@ -84,7 +93,7 @@ jobs:
           ### Installation
           Download the APK below and install it on your Android device.
           
-          **Note**: This APK is signed with a debug key. For production use, configure proper signing keys in repository secrets.
+          ${{ env.KEYSTORE_FILE && '**Note**: This APK is signed with a production keystore for secure distribution.' || '**Note**: This APK is signed with a debug key for testing. For production use, configure proper signing keys in repository secrets.' }}
           
           ### Changes
           See commit history for details.
