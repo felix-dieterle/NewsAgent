@@ -59,17 +59,17 @@ interface CredibilityApi {
 - **Features**: Claim-Erkennung, Fact-Checking
 - **Preis**: Akademisch kostenlos, kommerzielle Lizenz verfügbar
 
-### 2. Google Fact Check Tools API
+### 3. Google Fact Check Tools API
 - **URL**: https://toolbox.google.com/factcheck/apis
 - **Features**: Überprüfung von Behauptungen gegen Fact-Check-Datenbank
 - **Preis**: Kostenlos mit Limits
 
-### 3. Full Fact API (UK)
+### 4. Full Fact API (UK)
 - **URL**: https://fullfact.org/
 - **Features**: Automated fact checking
 - **Preis**: Auf Anfrage
 
-### 4. Custom API Integration
+### 5. Custom API Integration
 
 Für eine eigene API-Implementierung:
 

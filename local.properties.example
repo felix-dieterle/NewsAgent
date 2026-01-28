@@ -1,20 +1,24 @@
 # Example Configuration
-# Kopieren Sie diese Datei zu local.properties und fügen Sie Ihre echten API-Token ein
-# WARNUNG: Committen Sie local.properties NIEMALS zu Git!
+# Diese Datei zeigt die benötigten API-Token für die App
+# WICHTIG: Diese Werte werden in der App-UI unter Einstellungen konfiguriert,
+# nicht in dieser Datei. Dies ist nur zur Dokumentation.
 
 # News API Configuration
 # Verwenden Sie EINEN der folgenden Dienste (beide kostenlos):
 # - NewsAPI.org: https://newsapi.org (100 Anfragen/Tag)
 # - GNews.io: https://gnews.io (100 Anfragen/Tag)
+# Tragen Sie den Token in der App unter "Einstellungen" → "News API Token" ein
 news.api.token=YOUR_NEWS_API_TOKEN_HERE
 
 # AI API Configuration
 # OpenRouter für KI-Zusammenfassungen: https://openrouter.ai
+# Tragen Sie den Token in der App unter "Einstellungen" → "AI API Token" ein
 ai.api.token=YOUR_AI_API_TOKEN_HERE
 
 # Optional: Credibility API
 # Vorkonfiguriert für newscheck123.de (noch nicht online)
 # Die App verwendet heuristische Prüfungen als Fallback
+# Kann in SharedPreferences angepasst werden (Schlüssel: "credibility_api_url")
 credibility.api.url=https://newscheck123.de/
 #credibility.api.key=YOUR_CREDIBILITY_API_KEY_HERE
 

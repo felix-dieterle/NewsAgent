@@ -33,11 +33,11 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(0, 16, 0, 8)
         })
         
-        val newsApiKeyInput = EditText(this).apply {
+        val newsApiTokenInput = EditText(this).apply {
             hint = "Geben Sie Ihren News API Token ein"
             setText(prefs.getString("news_api_token", ""))
         }
-        layout.addView(newsApiKeyInput)
+        layout.addView(newsApiTokenInput)
         
         layout.addView(TextView(this).apply {
             text = "NewsAPI.org oder GNews.io - beide kostenlos verfügbar"
@@ -53,11 +53,11 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(0, 16, 0, 8)
         })
         
-        val openRouterApiKeyInput = EditText(this).apply {
+        val aiApiTokenInput = EditText(this).apply {
             hint = "Geben Sie Ihren AI API Token ein"
             setText(prefs.getString("openrouter_api_key", ""))
         }
-        layout.addView(openRouterApiKeyInput)
+        layout.addView(aiApiTokenInput)
         
         layout.addView(TextView(this).apply {
             text = "OpenRouter für KI-Zusammenfassungen - https://openrouter.ai"
@@ -170,8 +170,8 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(0, 32, 0, 0)
             setOnClickListener {
                 saveSettings(
-                    newsApiKeyInput.text.toString(),
-                    openRouterApiKeyInput.text.toString(),
+                    newsApiTokenInput.text.toString(),
+                    aiApiTokenInput.text.toString(),
                     intervalInput.text.toString().toIntOrNull() ?: 60,
                     notificationsCheckbox.isChecked,
                     autoSummaryCheckbox.isChecked,
@@ -188,8 +188,8 @@ class SettingsActivity : AppCompatActivity() {
     }
     
     private fun saveSettings(
-        newsApiKey: String,
-        openRouterApiKey: String,
+        newsApiToken: String,
+        aiApiToken: String,
         intervalMinutes: Int,
         enableNotifications: Boolean,
         enableAutoSummary: Boolean,
@@ -200,12 +200,12 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         prefs.edit().apply {
             // Save unified news API token (can be used for NewsAPI.org or GNews)
-            putString("news_api_token", newsApiKey)
+            putString("news_api_token", newsApiToken)
             // Also save to legacy keys for backward compatibility
-            putString("news_api_key", newsApiKey)
-            putString("gnews_api_token", newsApiKey)
+            putString("news_api_key", newsApiToken)
+            putString("gnews_api_token", newsApiToken)
             
-            putString("openrouter_api_key", openRouterApiKey)
+            putString("openrouter_api_key", aiApiToken)
             putInt("update_interval_minutes", intervalMinutes)
             putBoolean("enable_notifications", enableNotifications)
             putBoolean("enable_auto_summary", enableAutoSummary)

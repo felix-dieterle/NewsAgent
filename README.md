@@ -71,16 +71,17 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 2. Android SDK 24 (Android 7.0) oder höher
 3. Kotlin 1.9.20
 
-### API-Schlüssel
+### API-Token
 
 Die App benötigt zwei API-Token:
 
 #### 1. News API Token
-- Verwenden Sie **einen** der folgenden kostenlosen Dienste:
+- Wählen Sie **einen** der folgenden kostenlosen Dienste:
   - **NewsAPI.org**: Registrieren Sie sich auf [newsapi.org](https://newsapi.org) (100 Anfragen/Tag)
   - **GNews.io**: Registrieren Sie sich auf [gnews.io](https://gnews.io) (100 Anfragen/Tag)
-- Geben Sie den Token in den App-Einstellungen unter "News API Token" ein
-- Beide Dienste nutzen denselben Token-Wert in der App
+- Holen Sie sich einen Token von dem Dienst Ihrer Wahl
+- Geben Sie diesen Token in den App-Einstellungen unter "News API Token" ein
+- Hinweis: Sie brauchen nur einen Token von einem der beiden Dienste, nicht beide
 
 #### 2. AI API Token
 - Registrieren Sie sich auf [openrouter.ai](https://openrouter.ai)
@@ -233,10 +234,10 @@ Bekannte vertrauenswürdige Quellen:
 ### SharedPreferences Schlüssel
 
 ```kotlin
-news_api_token               // Unified News API Token (NewsAPI.org oder GNews.io)
-news_api_key                 // Legacy: News API Schlüssel (wird synchronisiert)
-gnews_api_token              // Legacy: GNews Token (wird synchronisiert)
-openrouter_api_key           // AI API Token für OpenRouter
+news_api_token               // Unified News API Token (von NewsAPI.org ODER GNews.io)
+news_api_key                 // Legacy: News API Key (wird mit news_api_token synchronisiert)
+gnews_api_token              // Legacy: GNews Token (wird mit news_api_token synchronisiert)
+openrouter_api_key           // OpenRouter API Key für AI-Zusammenfassungen
 credibility_api_url          // Credibility API URL (Standard: https://newscheck123.de/)
 update_interval_minutes      // Update-Intervall (Standard: 60)
 enable_notifications         // Benachrichtigungen (Standard: true)
