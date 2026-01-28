@@ -73,17 +73,21 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 
 ### API-Token
 
-Die App benötigt zwei API-Token:
+Die App benötigt je nach gewählter Nachrichtenquelle einen oder zwei API-Token:
 
-#### 1. News API Token
-- Wählen Sie **einen** der folgenden kostenlosen Dienste:
-  - **NewsAPI.org**: Registrieren Sie sich auf [newsapi.org](https://newsapi.org) (100 Anfragen/Tag)
-  - **GNews.io**: Registrieren Sie sich auf [gnews.io](https://gnews.io) (100 Anfragen/Tag)
-- Holen Sie sich einen Token von dem Dienst Ihrer Wahl
-- Geben Sie diesen Token in den App-Einstellungen unter "News API Token" ein
-- Hinweis: Sie brauchen nur einen Token von einem der beiden Dienste, nicht beide
+#### 1. Nachrichtenquelle wählen
+In den Einstellungen wählen Sie zunächst Ihre bevorzugte Nachrichtenquelle:
+- **NewsAPI.org**: 100 Anfragen/Tag kostenlos, registrieren auf [newsapi.org](https://newsapi.org)
+- **GNews.io**: 100 Anfragen/Tag kostenlos, registrieren auf [gnews.io](https://gnews.io)
+- **RSS Feeds**: 100% kostenlos, keine Registrierung erforderlich
 
-#### 2. AI API Token
+#### 2. News API Token
+- Wenn Sie NewsAPI.org wählen: Geben Sie Ihren NewsAPI.org Token ein
+- Wenn Sie GNews.io wählen: Geben Sie Ihren GNews.io Token ein
+- Wenn Sie RSS Feeds wählen: Kein Token erforderlich
+- **Wichtig**: Der Token muss von der gewählten Quelle stammen!
+
+#### 3. AI API Token
 - Registrieren Sie sich auf [openrouter.ai](https://openrouter.ai)
 - Holen Sie sich einen API-Token für KI-Zusammenfassungen
 - Kostenlose/günstige Modelle verfügbar:
@@ -139,15 +143,19 @@ Weitere Details finden Sie in [CI_CD_DOCUMENTATION.md](CI_CD_DOCUMENTATION.md).
 ### Erste Schritte
 
 1. **App öffnen** und zu den Einstellungen navigieren
-2. **API-Token eingeben**:
-   - News API Token (NewsAPI.org oder GNews.io)
+2. **Nachrichtenquelle wählen**:
+   - NewsAPI.org (benötigt Token)
+   - GNews.io (benötigt Token)
+   - RSS Feeds (kostenlos, kein Token)
+3. **API-Token eingeben**:
+   - News API Token (für gewählte Quelle, außer RSS)
    - AI API Token (OpenRouter für KI-Zusammenfassungen)
-3. **Update-Intervall konfigurieren** (Standard: 60 Minuten)
-4. **Features aktivieren/deaktivieren**:
+4. **Update-Intervall konfigurieren** (Standard: 60 Minuten)
+5. **Features aktivieren/deaktivieren**:
    - Benachrichtigungen
    - Automatische Zusammenfassungen
    - Glaubwürdigkeitsprüfung
-5. **Einstellungen speichern**
+6. **Einstellungen speichern**
 
 ### Features nutzen
 
@@ -234,9 +242,10 @@ Bekannte vertrauenswürdige Quellen:
 ### SharedPreferences Schlüssel
 
 ```kotlin
-news_api_token               // Unified News API Token (von NewsAPI.org ODER GNews.io)
-news_api_key                 // Legacy: News API Key (wird mit news_api_token synchronisiert)
-gnews_api_token              // Legacy: GNews Token (wird mit news_api_token synchronisiert)
+news_source                  // Gewählte Nachrichtenquelle: "newsapi", "gnews", oder "rss"
+news_api_token               // News API Token (gespeichert unabhängig von der Quelle)
+news_api_key                 // NewsAPI.org Token (nur wenn newsapi gewählt)
+gnews_api_token              // GNews.io Token (nur wenn gnews gewählt)
 openrouter_api_key           // OpenRouter API Key für AI-Zusammenfassungen
 credibility_api_url          // Credibility API URL (Standard: https://newscheck123.de/)
 update_interval_minutes      // Update-Intervall (Standard: 60)
@@ -278,10 +287,13 @@ Wenn die App nicht installiert werden kann oder abstürzt:
 - Logs können über "Logs teilen" für Support exportiert werden
 
 ### Keine Nachrichten werden geladen
-- Überprüfen Sie den News API Token in den Einstellungen
-- Stellen Sie sicher, dass Sie einen gültigen Token von NewsAPI.org oder GNews.io haben
+- Überprüfen Sie, dass Sie die richtige **Nachrichtenquelle** in den Einstellungen gewählt haben
+- Stellen Sie sicher, dass Ihr News API Token von der **gewählten Quelle** stammt:
+  - NewsAPI.org Token funktioniert nur mit NewsAPI.org
+  - GNews.io Token funktioniert nur mit GNews.io
+- Für RSS Feeds wird kein Token benötigt
 - Prüfen Sie die Internetverbindung
-- Überprüfen Sie das API-Limit (beide Dienste: 100 Anfragen/Tag im kostenlosen Tier)
+- Überprüfen Sie das API-Limit (NewsAPI.org/GNews.io: 100 Anfragen/Tag)
 - Überprüfen Sie die Logs in den Einstellungen für Details
 
 ### Zusammenfassungen werden nicht generiert
@@ -301,7 +313,10 @@ Wenn die App nicht installiert werden kann oder abstürzt:
 - Caching erfolgt nur im Speicher (nicht persistent)
 - Alle API-Anfragen gehen direkt an die jeweiligen Dienste
 - Keine Daten werden an Dritte weitergegeben
-- News API Token funktioniert mit NewsAPI.org oder GNews.io (beide unabhängige Dienste)
+- Die gewählte Nachrichtenquelle bestimmt, welcher Dienst verwendet wird:
+  - NewsAPI.org: Anfragen gehen an newsapi.org
+  - GNews.io: Anfragen gehen an gnews.io
+  - RSS: Anfragen gehen an öffentliche RSS-Feeds (Tagesschau, Heise, etc.)
 
 ## Performance & Kosteneffizienz
 
