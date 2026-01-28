@@ -8,6 +8,7 @@ import com.newsagent.models.CredibilityScore
 import com.newsagent.models.NewsArticle
 import com.newsagent.models.NewsSummary
 import com.newsagent.utils.Logger
+import com.newsagent.utils.RateLimiter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -25,6 +26,7 @@ class AiSummaryService(private val context: Context) {
     
     private val prefs: SharedPreferences = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
     private val cacheManager = CacheManager.getInstance()
+    private val rateLimiter = RateLimiter.getInstance()
     
     private val openRouterApi: OpenRouterApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -62,6 +64,13 @@ class AiSummaryService(private val context: Context) {
             val apiKey = prefs.getString("openrouter_api_key", "") ?: ""
             if (apiKey.isEmpty()) {
                 Logger.w("AiSummaryService", "OpenRouter API key not configured")
+                return@withContext null
+            }
+            
+            // Check rate limit - AI calls are expensive
+            if (!rateLimiter.allowRequest("openrouter_api")) {
+                val remaining = rateLimiter.getRemainingRequests("openrouter_api")
+                Logger.w("AiSummaryService", "Rate limit reached. Remaining requests: $remaining")
                 return@withContext null
             }
             

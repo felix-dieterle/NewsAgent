@@ -6,6 +6,7 @@ import com.newsagent.api.*
 import com.newsagent.cache.CacheManager
 import com.newsagent.models.NewsArticle
 import com.newsagent.utils.Logger
+import com.newsagent.utils.RateLimiter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Cache
@@ -25,6 +26,7 @@ class NewsRepository(private val context: Context) {
     
     private val prefs: SharedPreferences = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
     private val cacheManager = CacheManager.getInstance()
+    private val rateLimiter = RateLimiter.getInstance()
     
     // HTTP cache for network responses (10 MB)
     private val httpCache = Cache(
@@ -92,6 +94,13 @@ class NewsRepository(private val context: Context) {
             cacheManager.getCachedArticles(cacheKey)?.let { cached ->
                 Logger.d("NewsRepository", "Returning ${cached.size} cached headlines")
                 return@withContext cached
+            }
+            
+            // Check rate limit
+            if (!rateLimiter.allowRequest("news_api")) {
+                val remaining = rateLimiter.getRemainingRequests("news_api")
+                Logger.w("NewsRepository", "Rate limit reached. Remaining requests: $remaining")
+                return@withContext emptyList<NewsArticle>()
             }
             
             Logger.d("NewsRepository", "Fetching top headlines for country=$country, pageSize=$pageSize")
