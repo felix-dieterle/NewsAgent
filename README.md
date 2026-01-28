@@ -73,16 +73,18 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 
 ### API-Schlüssel
 
-Die App benötigt zwei API-Schlüssel:
+Die App benötigt zwei API-Token:
 
-#### 1. News API
-- Registrieren Sie sich auf [newsapi.org](https://newsapi.org)
-- Holen Sie sich einen kostenlosen API-Schlüssel
-- Geben Sie den Schlüssel in den App-Einstellungen ein
+#### 1. News API Token
+- Verwenden Sie **einen** der folgenden kostenlosen Dienste:
+  - **NewsAPI.org**: Registrieren Sie sich auf [newsapi.org](https://newsapi.org) (100 Anfragen/Tag)
+  - **GNews.io**: Registrieren Sie sich auf [gnews.io](https://gnews.io) (100 Anfragen/Tag)
+- Geben Sie den Token in den App-Einstellungen unter "News API Token" ein
+- Beide Dienste nutzen denselben Token-Wert in der App
 
-#### 2. OpenRouter API
+#### 2. AI API Token
 - Registrieren Sie sich auf [openrouter.ai](https://openrouter.ai)
-- Holen Sie sich einen API-Schlüssel
+- Holen Sie sich einen API-Token für KI-Zusammenfassungen
 - Kostenlose/günstige Modelle verfügbar:
   - `google/gemini-flash-1.5` (Standard, kostenlos)
   - `meta-llama/llama-3.2-1b-instruct` (sehr günstig)
@@ -136,9 +138,9 @@ Weitere Details finden Sie in [CI_CD_DOCUMENTATION.md](CI_CD_DOCUMENTATION.md).
 ### Erste Schritte
 
 1. **App öffnen** und zu den Einstellungen navigieren
-2. **API-Schlüssel eingeben**:
-   - News API Schlüssel
-   - OpenRouter API Schlüssel
+2. **API-Token eingeben**:
+   - News API Token (NewsAPI.org oder GNews.io)
+   - AI API Token (OpenRouter für KI-Zusammenfassungen)
 3. **Update-Intervall konfigurieren** (Standard: 60 Minuten)
 4. **Features aktivieren/deaktivieren**:
    - Benachrichtigungen
@@ -178,10 +180,11 @@ Weitere Details finden Sie in [CI_CD_DOCUMENTATION.md](CI_CD_DOCUMENTATION.md).
 ## Glaubwürdigkeitsprüfung
 
 ### API-Integration
-Die App bietet eine Schnittstelle zur Integration mit Fact-Checking-APIs. Konfigurieren Sie die URL in den Einstellungen:
+Die App bietet eine Schnittstelle zur Integration mit Fact-Checking-APIs. Die Standardkonfiguration verwendet:
 ```
-credibility_api_url: https://your-credibility-api.com/
+credibility_api_url: https://newscheck123.de/
 ```
+*Hinweis: Diese API ist noch nicht online. Die App verwendet heuristische Prüfungen als Fallback.*
 
 ### Heuristische Prüfung
 Wenn keine API verfügbar ist, nutzt die App heuristische Methoden:
@@ -230,9 +233,11 @@ Bekannte vertrauenswürdige Quellen:
 ### SharedPreferences Schlüssel
 
 ```kotlin
-news_api_key                  // News API Schlüssel
-openrouter_api_key           // OpenRouter API Schlüssel
-credibility_api_url          // Credibility API URL (optional)
+news_api_token               // Unified News API Token (NewsAPI.org oder GNews.io)
+news_api_key                 // Legacy: News API Schlüssel (wird synchronisiert)
+gnews_api_token              // Legacy: GNews Token (wird synchronisiert)
+openrouter_api_key           // AI API Token für OpenRouter
+credibility_api_url          // Credibility API URL (Standard: https://newscheck123.de/)
 update_interval_minutes      // Update-Intervall (Standard: 60)
 enable_notifications         // Benachrichtigungen (Standard: true)
 enable_auto_summary          // Auto-Zusammenfassungen (Standard: true)
@@ -272,13 +277,14 @@ Wenn die App nicht installiert werden kann oder abstürzt:
 - Logs können über "Logs teilen" für Support exportiert werden
 
 ### Keine Nachrichten werden geladen
-- Überprüfen Sie den News API Schlüssel in den Einstellungen
+- Überprüfen Sie den News API Token in den Einstellungen
+- Stellen Sie sicher, dass Sie einen gültigen Token von NewsAPI.org oder GNews.io haben
 - Prüfen Sie die Internetverbindung
-- Überprüfen Sie das API-Limit (News API: 100 Anfragen/Tag im kostenlosen Tier)
+- Überprüfen Sie das API-Limit (beide Dienste: 100 Anfragen/Tag im kostenlosen Tier)
 - Überprüfen Sie die Logs in den Einstellungen für Details
 
 ### Zusammenfassungen werden nicht generiert
-- Überprüfen Sie den OpenRouter API Schlüssel
+- Überprüfen Sie den AI API Token (OpenRouter) in den Einstellungen
 - Stellen Sie sicher, dass "Automatische Zusammenfassungen" aktiviert ist
 - Prüfen Sie das API-Guthaben bei OpenRouter
 - Überprüfen Sie die Logs in den Einstellungen für Details
@@ -290,10 +296,11 @@ Wenn die App nicht installiert werden kann oder abstürzt:
 
 ## Datenschutz
 
-- Die App speichert API-Schlüssel lokal auf dem Gerät
+- Die App speichert API-Token lokal auf dem Gerät (verschlüsselt durch Android)
 - Caching erfolgt nur im Speicher (nicht persistent)
 - Alle API-Anfragen gehen direkt an die jeweiligen Dienste
 - Keine Daten werden an Dritte weitergegeben
+- News API Token funktioniert mit NewsAPI.org oder GNews.io (beide unabhängige Dienste)
 
 ## Performance & Kosteneffizienz
 

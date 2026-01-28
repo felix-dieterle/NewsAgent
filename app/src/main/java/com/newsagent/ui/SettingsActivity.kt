@@ -26,41 +26,41 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(16, 16, 16, 16)
         }
         
-        // News API Key
+        // News API Token (unified for NewsAPI.org and GNews)
         layout.addView(TextView(this).apply {
-            text = "News API Schlüssel"
+            text = "News API Token"
             textSize = 18f
             setPadding(0, 16, 0, 8)
         })
         
         val newsApiKeyInput = EditText(this).apply {
-            hint = "Geben Sie Ihren News API Schlüssel ein"
-            setText(prefs.getString("news_api_key", ""))
+            hint = "Geben Sie Ihren News API Token ein"
+            setText(prefs.getString("news_api_token", ""))
         }
         layout.addView(newsApiKeyInput)
         
         layout.addView(TextView(this).apply {
-            text = "Erhalten Sie einen kostenlosen Schlüssel auf https://newsapi.org"
+            text = "NewsAPI.org oder GNews.io - beide kostenlos verfügbar"
             textSize = 12f
             setTextColor(0xFF666666.toInt())
             setPadding(0, 4, 0, 16)
         })
         
-        // OpenRouter API Key
+        // AI API Token (OpenRouter for summaries)
         layout.addView(TextView(this).apply {
-            text = "OpenRouter API Schlüssel"
+            text = "AI API Token"
             textSize = 18f
             setPadding(0, 16, 0, 8)
         })
         
         val openRouterApiKeyInput = EditText(this).apply {
-            hint = "Geben Sie Ihren OpenRouter API Schlüssel ein"
+            hint = "Geben Sie Ihren AI API Token ein"
             setText(prefs.getString("openrouter_api_key", ""))
         }
         layout.addView(openRouterApiKeyInput)
         
         layout.addView(TextView(this).apply {
-            text = "Erhalten Sie einen Schlüssel auf https://openrouter.ai"
+            text = "OpenRouter für KI-Zusammenfassungen - https://openrouter.ai"
             textSize = 12f
             setTextColor(0xFF666666.toInt())
             setPadding(0, 4, 0, 16)
@@ -199,7 +199,12 @@ class SettingsActivity : AppCompatActivity() {
         Logger.d("SettingsActivity", "Saving settings...")
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         prefs.edit().apply {
+            // Save unified news API token (can be used for NewsAPI.org or GNews)
+            putString("news_api_token", newsApiKey)
+            // Also save to legacy keys for backward compatibility
             putString("news_api_key", newsApiKey)
+            putString("gnews_api_token", newsApiKey)
+            
             putString("openrouter_api_key", openRouterApiKey)
             putInt("update_interval_minutes", intervalMinutes)
             putBoolean("enable_notifications", enableNotifications)

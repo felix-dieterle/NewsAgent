@@ -36,7 +36,7 @@ class CredibilityCheckService(private val context: Context) {
             .build()
         
         // This is a placeholder URL - replace with actual credibility checking API
-        val baseUrl = prefs.getString("credibility_api_url", "https://api.credibilitycheck.example/") ?: "https://api.credibilitycheck.example/"
+        val baseUrl = prefs.getString("credibility_api_url", "https://newscheck123.de/") ?: "https://newscheck123.de/"
         
         Retrofit.Builder()
             .baseUrl(baseUrl)
