@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.newsagent.api.*
 import com.newsagent.models.NewsArticle
+import com.newsagent.utils.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -43,11 +44,14 @@ class NewsRepository(private val context: Context) {
         try {
             val apiKey = prefs.getString("news_api_key", "") ?: ""
             if (apiKey.isEmpty()) {
+                Logger.w("NewsRepository", "News API key not configured")
                 return@withContext emptyList<NewsArticle>()
             }
             
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
+            
+            Logger.d("NewsRepository", "Fetching top headlines for country=$country, pageSize=$pageSize")
             
             val response = newsApi.getTopHeadlines(
                 apiKey = apiKey,
@@ -56,11 +60,15 @@ class NewsRepository(private val context: Context) {
             )
             
             if (response.isSuccessful && response.body() != null) {
-                response.body()!!.articles.map { convertToNewsArticle(it) }
+                val articles = response.body()!!.articles.map { convertToNewsArticle(it) }
+                Logger.i("NewsRepository", "Successfully fetched ${articles.size} headlines")
+                articles
             } else {
+                Logger.e("NewsRepository", "API request failed: ${response.code()} - ${response.message()}")
                 emptyList()
             }
         } catch (e: Exception) {
+            Logger.e("NewsRepository", "Exception fetching headlines", e)
             e.printStackTrace()
             emptyList()
         }
