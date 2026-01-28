@@ -28,6 +28,24 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
+    - name: Decode Keystore (if provided)
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        if [ -n "$KEYSTORE_BASE64" ]; then
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          echo "KEYSTORE_FILE=release.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
+          echo "KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
+          echo "Keystore configured for production signing"
+        else
+          echo "No keystore configured, will use debug signing"
+        fi
+      
     - name: Build Release APK
       run: ./gradlew assembleRelease --stacktrace
       
@@ -48,8 +66,17 @@ jobs:
         
     - name: Rename APK
       run: |
-        mv app/build/outputs/apk/release/app-release-unsigned.apk \
-           app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-release.apk
+        # Determine if this is a production signed build or debug signed
+        if [ -f "release.keystore" ]; then
+          SUFFIX="release"
+        else
+          SUFFIX="debug-signed"
+        fi
+        
+        # Find the APK file (could be app-release.apk or app-release-unsigned.apk)
+        APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
+        mv "$APK_FILE" \
+           app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-${SUFFIX}.apk
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -63,10 +90,15 @@ jobs:
           
           Auto-generated release from commit ${{ github.sha }}
           
+          ### Installation
+          Download the APK below and install it on your Android device.
+          
+          ${{ env.KEYSTORE_FILE && '**Note**: This APK is signed with a production keystore for secure distribution.' || '**Note**: This APK is signed with a debug key for testing. For production use, configure proper signing keys in repository secrets.' }}
+          
           ### Changes
           See commit history for details.
           
           ### Download
           - Release APK: See assets below
         files: |
-          app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-release.apk
+          app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-*.apk

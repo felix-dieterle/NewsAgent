@@ -92,7 +92,26 @@ cd NewsAgent
 Das Projekt verwendet GitHub Actions für automatisches Bauen und Veröffentlichen:
 
 - **CI (Continuous Integration):** Automatische Builds und Tests bei jedem Pull Request
+  - Debug APKs werden als Artifacts hochgeladen und können direkt installiert werden
 - **CD (Continuous Deployment):** Automatische APK-Releases bei jedem Merge in `main`
+  - Signierte APKs werden in GitHub Releases veröffentlicht
+  - APKs sind direkt auf Android-Geräten installierbar
+
+#### APK-Downloads
+
+Sie können vorkompilierte APKs von diesem Repository herunterladen:
+
+1. **Aus Workflow-Artifacts** (neueste Builds):
+   - Gehen Sie zu "Actions" → Wählen Sie einen erfolgreichen Workflow
+   - Laden Sie das "debug-apk" Artifact herunter
+   - Entpacken Sie die ZIP-Datei und installieren Sie die APK
+
+2. **Aus Releases** (offizielle Versionen):
+   - Gehen Sie zu "Releases" → Wählen Sie die neueste Version
+   - Laden Sie die APK-Datei herunter
+   - Installieren Sie sie direkt auf Ihrem Android-Gerät
+
+**Hinweis:** Bei der Installation müssen Sie möglicherweise "Installation aus unbekannten Quellen" in den Android-Einstellungen erlauben.
 
 Weitere Details finden Sie in [CI_CD_DOCUMENTATION.md](CI_CD_DOCUMENTATION.md).
 
