@@ -3,9 +3,12 @@ package com.newsagent.services
 import android.content.Context
 import android.content.SharedPreferences
 import com.newsagent.api.*
+import com.newsagent.cache.CacheManager
 import com.newsagent.models.CredibilityScore
 import com.newsagent.models.NewsArticle
 import com.newsagent.models.NewsSummary
+import com.newsagent.utils.Logger
+import com.newsagent.utils.RateLimiter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -13,21 +16,28 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 /**
  * Service for generating AI summaries using OpenRouter
+ * Implements caching to reduce redundant API calls and costs
  */
 class AiSummaryService(private val context: Context) {
     
     private val prefs: SharedPreferences = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
+    private val cacheManager = CacheManager.getInstance()
+    private val rateLimiter = RateLimiter.getInstance()
     
     private val openRouterApi: OpenRouterApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            // Only log basic info to reduce overhead
+            level = HttpLoggingInterceptor.Level.BASIC
         }
         
         val client = OkHttpClient.Builder()
             .addInterceptor(logging)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
             .build()
         
         Retrofit.Builder()
@@ -40,13 +50,31 @@ class AiSummaryService(private val context: Context) {
     
     /**
      * Generate a summary for a news article using OpenRouter AI
+     * Uses cache to avoid redundant API calls for the same article
      */
     suspend fun generateSummary(article: NewsArticle): NewsSummary? = withContext(Dispatchers.IO) {
         try {
+            // Check cache first using article URL as stable identifier
+            val cacheKey = article.url
+            cacheManager.getCachedSummary(cacheKey)?.let { cached ->
+                Logger.d("AiSummaryService", "Returning cached summary for article: ${article.title}")
+                return@withContext cached
+            }
+            
             val apiKey = prefs.getString("openrouter_api_key", "") ?: ""
             if (apiKey.isEmpty()) {
+                Logger.w("AiSummaryService", "OpenRouter API key not configured")
                 return@withContext null
             }
+            
+            // Check rate limit - AI calls are expensive
+            if (!rateLimiter.allowRequest("openrouter_api")) {
+                val remaining = rateLimiter.getRemainingRequests("openrouter_api")
+                Logger.w("AiSummaryService", "Rate limit reached. Remaining requests: $remaining")
+                return@withContext null
+            }
+            
+            Logger.d("AiSummaryService", "Generating new summary for article: ${article.title}")
             
             val prompt = buildSummaryPrompt(article)
             val request = ChatRequest(
@@ -63,11 +91,19 @@ class AiSummaryService(private val context: Context) {
             
             if (response.isSuccessful && response.body() != null) {
                 val summaryText = response.body()!!.choices.firstOrNull()?.message?.content ?: return@withContext null
-                parseSummary(article.id, summaryText)
+                val summary = parseSummary(article.id, summaryText)
+                
+                // Cache the summary
+                cacheManager.cacheSummary(cacheKey, summary)
+                Logger.i("AiSummaryService", "Successfully generated and cached summary")
+                
+                summary
             } else {
+                Logger.e("AiSummaryService", "API request failed: ${response.code()}")
                 null
             }
         } catch (e: Exception) {
+            Logger.e("AiSummaryService", "Exception generating summary", e)
             e.printStackTrace()
             null
         }

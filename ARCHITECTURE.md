@@ -104,6 +104,27 @@ NewsArticle loaded
    Attach to NewsArticle
 ```
 
+#### 5. Caching Flow
+```
+User Request
+     │
+     ▼
+Check CacheManager
+     │
+     ├─── Cache Hit ────┐
+     │                  │
+     ▼                  │
+API Call              │
+     │                  │
+     ▼                  │
+Store in Cache        │
+     │                  │
+     └──────────────────┘
+     │
+     ▼
+Return Cached Data
+```
+
 ### Components Description
 
 #### Models
@@ -126,8 +147,11 @@ NewsArticle loaded
 #### Services
 
 **NewsRepository**
-- Fetches news from News API
+- Fetches news from News API, GNews API, and RSS feeds
 - Converts API responses to domain models
+- Implements HTTP response caching (10 MB)
+- Application-level caching for articles (15 min TTL)
+- Rate limiting protection for API calls
 - Manages API configuration (keys, preferences)
 
 **AiSummaryService**
@@ -135,6 +159,8 @@ NewsArticle loaded
 - Generates German summaries
 - Extracts key points from articles
 - Uses free/cheap AI models (Gemini Flash)
+- Aggressive caching (24h TTL) to minimize costs
+- Rate limiting to prevent quota exhaustion
 
 **CredibilityCheckService**
 - Primary: API-based credibility checking
@@ -142,6 +168,8 @@ NewsArticle loaded
   - Source reputation scoring
   - Sensationalism detection
   - Author verification
+- Caching of credibility scores (24h TTL)
+- Rate limiting for API calls
 
 **TextToSpeechService**
 - Android TTS integration
@@ -153,6 +181,23 @@ NewsArticle loaded
 - Periodic news fetching
 - Notification generation
 - Respects network constraints
+- Uses cached data when available
+
+#### Utilities
+
+**CacheManager**
+- Singleton in-memory cache
+- Supports articles, summaries, and credibility scores
+- TTL-based expiration
+- Thread-safe concurrent operations
+- Cache statistics and monitoring
+
+**RateLimiter**
+- Prevents API quota exhaustion
+- Configurable limits per service
+- Sliding window algorithm
+- Statistics and remaining quota tracking
+- Automatic request tracking
 
 #### UI Components
 
@@ -247,16 +292,25 @@ language: String                  // News language filter
 
 ### Scalability
 
+**Current Optimizations:**
+- HTTP response caching for network efficiency
+- Application-level caching with TTL management
+- Parallel article processing with coroutines
+- Rate limiting to prevent quota exhaustion
+- Smart cache keys based on stable identifiers
+
 **Current Limitations:**
-- In-memory storage only
-- No offline support
-- Limited to 100 news/day (free API)
+- In-memory storage only (volatile)
+- No offline support beyond HTTP cache
+- Limited to API free tiers (100 news/day, 50 AI/hour)
 
 **Future Improvements:**
-- Room database for offline storage
-- Caching layer
-- Multiple news sources
-- Rate limiting handling
+- Room database for persistent offline storage
+- Advanced caching policies (LRU, size-based eviction)
+- Multiple news sources with intelligent fallback
+- Advanced rate limiting with exponential backoff
+- Network request batching
+- Background sync optimization with WorkManager constraints
 
 ### Testing Strategy
 
@@ -295,7 +349,17 @@ language: String                  // News language filter
 1. **Network**: All API calls on IO dispatcher
 2. **UI**: RecyclerView for efficient list rendering
 3. **Background**: WorkManager respects battery optimization
-4. **Memory**: No persistent storage, minimal RAM footprint
+4. **Memory**: In-memory caching with TTL, minimal RAM footprint
+5. **Caching**: Multi-level caching strategy
+   - HTTP response caching (10 MB OkHttp cache)
+   - Application-level caching (articles, summaries, credibility)
+   - Cache TTLs: Articles (15 min), Summaries (24h), Credibility (24h)
+6. **Parallel Processing**: Coroutines for concurrent article processing
+7. **Rate Limiting**: Protects against API quota exhaustion
+   - News API: 95 requests/day
+   - GNews API: 95 requests/day
+   - OpenRouter: 50 requests/hour
+8. **Logging**: BASIC level in production (not BODY) to reduce overhead
 
 ### Accessibility
 

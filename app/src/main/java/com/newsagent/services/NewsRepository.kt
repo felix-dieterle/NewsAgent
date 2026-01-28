@@ -3,22 +3,36 @@ package com.newsagent.services
 import android.content.Context
 import android.content.SharedPreferences
 import com.newsagent.api.*
+import com.newsagent.cache.CacheManager
 import com.newsagent.models.NewsArticle
 import com.newsagent.utils.Logger
+import com.newsagent.utils.RateLimiter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 /**
  * Repository for fetching and managing news articles
+ * Implements caching to reduce redundant API calls and improve performance
  */
 class NewsRepository(private val context: Context) {
     
     private val prefs: SharedPreferences = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
+    private val cacheManager = CacheManager.getInstance()
+    private val rateLimiter = RateLimiter.getInstance()
+    
+    // HTTP cache for network responses (10 MB)
+    private val httpCache = Cache(
+        directory = File(context.cacheDir, "http_cache"),
+        maxSize = 10L * 1024L * 1024L // 10 MB
+    )
     
     private val newsApi: NewsApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -27,7 +41,10 @@ class NewsRepository(private val context: Context) {
         }
         
         val client = OkHttpClient.Builder()
+            .cache(httpCache)
             .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .build()
         
         Retrofit.Builder()
@@ -44,7 +61,10 @@ class NewsRepository(private val context: Context) {
         }
         
         val client = OkHttpClient.Builder()
+            .cache(httpCache)
             .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .build()
         
         Retrofit.Builder()
@@ -56,7 +76,7 @@ class NewsRepository(private val context: Context) {
     }
     
     /**
-     * Fetch top headlines
+     * Fetch top headlines with caching
      */
     suspend fun fetchTopHeadlines(): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
@@ -69,6 +89,20 @@ class NewsRepository(private val context: Context) {
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
             
+            // Check cache first
+            val cacheKey = "headlines_${country}_${pageSize}"
+            cacheManager.getCachedArticles(cacheKey)?.let { cached ->
+                Logger.d("NewsRepository", "Returning ${cached.size} cached headlines")
+                return@withContext cached
+            }
+            
+            // Check rate limit
+            if (!rateLimiter.allowRequest("news_api")) {
+                val remaining = rateLimiter.getRemainingRequests("news_api")
+                Logger.w("NewsRepository", "Rate limit reached. Remaining requests: $remaining")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
             Logger.d("NewsRepository", "Fetching top headlines for country=$country, pageSize=$pageSize")
             
             val response = newsApi.getTopHeadlines(
@@ -80,6 +114,10 @@ class NewsRepository(private val context: Context) {
             if (response.isSuccessful && response.body() != null) {
                 val articles = response.body()!!.articles.map { convertToNewsArticle(it) }
                 Logger.i("NewsRepository", "Successfully fetched ${articles.size} headlines")
+                
+                // Cache the results
+                cacheManager.cacheArticles(cacheKey, articles)
+                
                 articles
             } else {
                 Logger.e("NewsRepository", "API request failed: ${response.code()} - ${response.message()}")
@@ -93,7 +131,7 @@ class NewsRepository(private val context: Context) {
     }
     
     /**
-     * Search for news articles
+     * Search for news articles with caching and rate limiting
      */
     suspend fun searchNews(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
@@ -105,6 +143,20 @@ class NewsRepository(private val context: Context) {
             val language = prefs.getString("language", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
             
+            // Check cache first
+            val cacheKey = "search_${query}_${language}_${pageSize}"
+            cacheManager.getCachedArticles(cacheKey)?.let { cached ->
+                Logger.d("NewsRepository", "Returning ${cached.size} cached search results")
+                return@withContext cached
+            }
+            
+            // Check rate limit
+            if (!rateLimiter.allowRequest("news_api")) {
+                val remaining = rateLimiter.getRemainingRequests("news_api")
+                Logger.w("NewsRepository", "Rate limit reached. Remaining requests: $remaining")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
             val response = newsApi.searchNews(
                 apiKey = apiKey,
                 query = query,
@@ -113,7 +165,12 @@ class NewsRepository(private val context: Context) {
             )
             
             if (response.isSuccessful && response.body() != null) {
-                response.body()!!.articles.map { convertToNewsArticle(it) }
+                val articles = response.body()!!.articles.map { convertToNewsArticle(it) }
+                
+                // Cache the results
+                cacheManager.cacheArticles(cacheKey, articles)
+                
+                articles
             } else {
                 emptyList()
             }
