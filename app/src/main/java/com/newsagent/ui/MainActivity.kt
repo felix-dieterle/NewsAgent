@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.newsagent.models.NewsArticle
 import com.newsagent.services.*
+import com.newsagent.utils.Logger
 import kotlinx.coroutines.launch
 
 /**
@@ -32,20 +33,40 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize services
-        newsRepository = NewsRepository(this)
-        aiSummaryService = AiSummaryService(this)
-        credibilityService = CredibilityCheckService(this)
+        Logger.i("MainActivity", "onCreate started")
         
-        // Setup UI
-        setupRecyclerView()
-        setupFab()
-        
-        // Load news
-        loadNews()
-        
-        // Schedule periodic updates
-        scheduleNewsUpdates()
+        try {
+            // Initialize services
+            Logger.d("MainActivity", "Initializing services...")
+            newsRepository = NewsRepository(this)
+            aiSummaryService = AiSummaryService(this)
+            credibilityService = CredibilityCheckService(this)
+            Logger.d("MainActivity", "Services initialized successfully")
+            
+            // Setup UI
+            Logger.d("MainActivity", "Setting up UI...")
+            setupRecyclerView()
+            setupFab()
+            Logger.d("MainActivity", "UI setup completed")
+            
+            // Load news
+            Logger.i("MainActivity", "Loading initial news...")
+            loadNews()
+            
+            // Schedule periodic updates
+            Logger.d("MainActivity", "Scheduling periodic updates...")
+            scheduleNewsUpdates()
+            
+            Logger.i("MainActivity", "onCreate completed successfully")
+        } catch (e: Exception) {
+            Logger.e("MainActivity", "Fatal error in onCreate", e)
+            // Show error to user instead of crashing
+            Toast.makeText(
+                this,
+                "Fehler beim Starten der App. Bitte überprüfen Sie die Logs in den Einstellungen.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
     
     private fun setupRecyclerView() {
@@ -74,9 +95,12 @@ class MainActivity : AppCompatActivity() {
     private fun loadNews() {
         lifecycleScope.launch {
             try {
+                Logger.d("MainActivity", "Fetching headlines...")
                 val newArticles = newsRepository.fetchTopHeadlines()
+                Logger.i("MainActivity", "Fetched ${newArticles.size} articles")
                 
                 if (newArticles.isEmpty()) {
+                    Logger.w("MainActivity", "No articles fetched - possibly missing API key")
                     Toast.makeText(
                         this@MainActivity,
                         "Keine Nachrichten gefunden. Bitte API-Schlüssel in Einstellungen konfigurieren.",
@@ -108,6 +132,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
+                Logger.e("MainActivity", "Error loading news", e)
                 e.printStackTrace()
                 Toast.makeText(
                     this@MainActivity,
