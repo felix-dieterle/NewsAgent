@@ -13,6 +13,11 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 - **⏰ Konfigurierbare Updates**: Einstellbare Intervalle für automatische Nachrichtenupdates
 - **🔔 Benachrichtigungen**: Push-Benachrichtigungen bei neuen Nachrichten
 - **🎨 Material Design UI**: Moderne und benutzerfreundliche Oberfläche
+- **🔍 Erweiterte Fehlerdiagnose**: 
+  - Umfassendes Logging-System mit persistenten Log-Dateien
+  - Log-Viewer direkt in der App
+  - Logs teilen für Support-Anfragen
+  - Globaler Crash-Handler für bessere Fehlerbehebung
 
 ## Architektur
 
@@ -213,15 +218,24 @@ Die App ist vorbereitet für Integration mit:
 
 ## Fehlerbehebung
 
+### Installation & Logging
+
+Wenn die App nicht installiert werden kann oder abstürzt:
+- Siehe [TROUBLESHOOTING_LOGGING.md](TROUBLESHOOTING_LOGGING.md) für detaillierte Hilfe
+- Nutzen Sie die **Log-Viewer-Funktion** in den Einstellungen
+- Logs können über "Logs teilen" für Support exportiert werden
+
 ### Keine Nachrichten werden geladen
 - Überprüfen Sie den News API Schlüssel in den Einstellungen
 - Prüfen Sie die Internetverbindung
 - Überprüfen Sie das API-Limit (News API: 100 Anfragen/Tag im kostenlosen Tier)
+- Überprüfen Sie die Logs in den Einstellungen für Details
 
 ### Zusammenfassungen werden nicht generiert
 - Überprüfen Sie den OpenRouter API Schlüssel
 - Stellen Sie sicher, dass "Automatische Zusammenfassungen" aktiviert ist
 - Prüfen Sie das API-Guthaben bei OpenRouter
+- Überprüfen Sie die Logs in den Einstellungen für Details
 
 ### Keine Benachrichtigungen
 - Aktivieren Sie Benachrichtigungen in den App-Einstellungen
