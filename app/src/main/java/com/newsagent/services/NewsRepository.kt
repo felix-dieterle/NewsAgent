@@ -131,7 +131,7 @@ class NewsRepository(private val context: Context) {
     }
     
     /**
-     * Search for news articles with caching
+     * Search for news articles with caching and rate limiting
      */
     suspend fun searchNews(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
@@ -148,6 +148,13 @@ class NewsRepository(private val context: Context) {
             cacheManager.getCachedArticles(cacheKey)?.let { cached ->
                 Logger.d("NewsRepository", "Returning ${cached.size} cached search results")
                 return@withContext cached
+            }
+            
+            // Check rate limit
+            if (!rateLimiter.allowRequest("news_api")) {
+                val remaining = rateLimiter.getRemainingRequests("news_api")
+                Logger.w("NewsRepository", "Rate limit reached. Remaining requests: $remaining")
+                return@withContext emptyList<NewsArticle>()
             }
             
             val response = newsApi.searchNews(

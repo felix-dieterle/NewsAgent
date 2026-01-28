@@ -116,9 +116,10 @@ class RateLimiter private constructor() {
             
             // Find the oldest request in the window
             val oldestRequest = limit.requests.minOrNull() ?: return 0
-            val windowStart = System.currentTimeMillis() - limit.windowMillis
+            val now = System.currentTimeMillis()
             
-            return maxOf(0, oldestRequest - windowStart)
+            // Time until the oldest request expires from the window
+            return maxOf(0, (oldestRequest + limit.windowMillis) - now)
         }
     }
     

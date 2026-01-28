@@ -107,9 +107,15 @@ class CacheManager private constructor() {
      * Clear expired entries from all caches
      */
     fun clearExpired() {
-        articlesCache.entries.removeIf { !it.value.isValid() }
-        summaryCache.entries.removeIf { !it.value.isValid() }
-        credibilityCache.entries.removeIf { !it.value.isValid() }
+        // Safely remove expired entries by collecting keys first
+        val expiredArticleKeys = articlesCache.filterValues { !it.isValid() }.keys
+        expiredArticleKeys.forEach { articlesCache.remove(it) }
+        
+        val expiredSummaryKeys = summaryCache.filterValues { !it.isValid() }.keys
+        expiredSummaryKeys.forEach { summaryCache.remove(it) }
+        
+        val expiredCredibilityKeys = credibilityCache.filterValues { !it.isValid() }.keys
+        expiredCredibilityKeys.forEach { credibilityCache.remove(it) }
     }
     
     /**

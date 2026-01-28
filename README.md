@@ -52,10 +52,10 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 - `TextToSpeechService.kt` - Audio-Zusammenfassungen
 - `NewsUpdateWorker.kt` - Hintergrund-Worker für periodische Updates
 
-#### 🛠️ Utilities (`utils/`)
-- `CacheManager.kt` - Multi-Level-Caching mit TTL-Verwaltung
-- `RateLimiter.kt` - API-Quota-Schutz und Kostenoptimierung
-- `Logger.kt` - Umfassendes Logging-System
+#### 🛠️ Utilities
+- `cache/CacheManager.kt` - Multi-Level-Caching mit TTL-Verwaltung
+- `utils/RateLimiter.kt` - API-Quota-Schutz und Kostenoptimierung
+- `utils/Logger.kt` - Umfassendes Logging-System
 
 #### 🎨 UI (`ui/`)
 - `MainActivity.kt` - Hauptansicht mit Nachrichtenliste

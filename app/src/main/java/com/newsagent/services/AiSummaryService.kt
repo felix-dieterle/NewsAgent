@@ -55,7 +55,7 @@ class AiSummaryService(private val context: Context) {
     suspend fun generateSummary(article: NewsArticle): NewsSummary? = withContext(Dispatchers.IO) {
         try {
             // Check cache first using article URL as stable identifier
-            val cacheKey = article.url.hashCode().toString()
+            val cacheKey = article.url
             cacheManager.getCachedSummary(cacheKey)?.let { cached ->
                 Logger.d("AiSummaryService", "Returning cached summary for article: ${article.title}")
                 return@withContext cached

@@ -54,7 +54,7 @@ class CredibilityCheckService(private val context: Context) {
     suspend fun checkCredibility(article: NewsArticle): CredibilityScore = withContext(Dispatchers.IO) {
         try {
             // Check cache first using article URL as stable identifier
-            val cacheKey = article.url.hashCode().toString()
+            val cacheKey = article.url
             cacheManager.getCachedCredibility(cacheKey)?.let { cached ->
                 Logger.d("CredibilityCheckService", "Returning cached credibility for: ${article.title}")
                 return@withContext cached
