@@ -60,7 +60,12 @@ class MainActivity : AppCompatActivity() {
             Logger.i("MainActivity", "onCreate completed successfully")
         } catch (e: Exception) {
             Logger.e("MainActivity", "Fatal error in onCreate", e)
-            throw e
+            // Show error to user instead of crashing
+            Toast.makeText(
+                this,
+                "Fehler beim Starten der App. Bitte überprüfen Sie die Logs in den Einstellungen.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
     

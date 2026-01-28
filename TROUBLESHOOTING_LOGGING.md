@@ -87,12 +87,13 @@ Die Logs zeigen:
    - "ClassNotFoundException" → APK ist beschädigt
    - "SecurityException" → Berechtigungsproblem
 
-**Logs mit ADB auslesen (für Entwickler):**
+**Logs mit ADB auslesen (nur für Debug-Builds):**
 ```bash
 # Via Logcat (wenn App abstürzt)
 adb logcat -s NewsAgent:* AndroidRuntime:E
 
-# Log-Dateien vom Gerät holen
+# Log-Dateien vom Gerät holen (nur bei Debug-Builds möglich)
+# Hinweis: Bei Release-Builds ist "run-as" nicht verfügbar
 adb shell run-as com.newsagent cat files/newsagent_logs.txt > logs.txt
 adb shell run-as com.newsagent cat files/newsagent_logs.txt.old >> logs.txt
 ```
@@ -205,7 +206,7 @@ Nein, aber sie rotieren automatisch bei 1MB. Manuelles Löschen über Einstellun
 
 ### Sind die Logs sicher?
 
-Ja, sie werden nur lokal im App-Verzeichnis gespeichert (nicht öffentlich zugänglich). API-Schlüssel werden NICHT geloggt.
+Ja, sie werden nur lokal im App-Verzeichnis gespeichert (nicht öffentlich zugänglich). API-Schlüssel werden mit minimaler Detailtiefe geloggt (nur HTTP-Methode und URL, keine Request-Bodies oder Header).
 
 ### Verlangsamen Logs die App?
 

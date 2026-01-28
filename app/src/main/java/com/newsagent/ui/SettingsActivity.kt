@@ -253,19 +253,35 @@ class SettingsActivity : AppCompatActivity() {
     }
     
     /**
-     * Share logs via Intent
+     * Share logs via Intent using FileProvider for large files
      */
     private fun shareLogs() {
         Logger.d("SettingsActivity", "Sharing logs")
-        val logs = Logger.readLogs(this)
         
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "NewsAgent App Logs")
-            putExtra(Intent.EXTRA_TEXT, logs)
+        try {
+            // Create a temporary text file with the logs
+            val logsFile = File(filesDir, "newsagent_logs_export.txt")
+            logsFile.writeText(Logger.readLogs(this))
+            
+            // Use FileProvider to share the file
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "com.newsagent.fileprovider",
+                logsFile
+            )
+            
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "NewsAgent App Logs")
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            
+            startActivity(Intent.createChooser(shareIntent, "Logs teilen via"))
+        } catch (e: Exception) {
+            Logger.e("SettingsActivity", "Failed to share logs", e)
+            Toast.makeText(this, "Fehler beim Teilen der Logs: ${e.message}", Toast.LENGTH_LONG).show()
         }
-        
-        startActivity(Intent.createChooser(shareIntent, "Logs teilen via"))
     }
     
     override fun onSupportNavigateUp(): Boolean {

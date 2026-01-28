@@ -22,7 +22,8 @@ class NewsRepository(private val context: Context) {
     
     private val newsApi: NewsApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            // Use BASIC level to avoid logging request/response bodies and sensitive headers
+            level = HttpLoggingInterceptor.Level.BASIC
         }
         
         val client = OkHttpClient.Builder()

@@ -36,6 +36,9 @@ class NewsAgentApplication : Application() {
             try {
                 Logger.e("CrashHandler", "Uncaught exception in thread ${thread.name}", throwable)
                 Logger.e("CrashHandler", "App is crashing. This log may help diagnose the issue.")
+                
+                // Give logger time to write to disk before terminating
+                Thread.sleep(500)
             } catch (e: Exception) {
                 // If logging fails, we can't do much about it
                 android.util.Log.e("NewsAgent", "Failed to log crash", e)
