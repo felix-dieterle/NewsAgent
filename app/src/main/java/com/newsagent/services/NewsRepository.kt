@@ -217,4 +217,74 @@ class NewsRepository(private val context: Context) {
             author = null
         )
     }
+    
+    /**
+     * Fetch news from public RSS feeds (completely free, no API key needed)
+     * Uses public German news RSS feeds like Tagesschau, Heise, etc.
+     */
+    suspend fun fetchRssNews(): List<NewsArticle> = withContext(Dispatchers.IO) {
+        try {
+            Logger.d("NewsRepository", "Fetching RSS news from public feeds")
+            val parser = RssFeedParser()
+            val allArticles = mutableListOf<NewsArticle>()
+            
+            // Fetch from multiple RSS feeds
+            for ((sourceName, feedUrl) in RssFeedParser.GERMAN_RSS_FEEDS) {
+                try {
+                    val rssArticles = parser.parseRssFeed(feedUrl, sourceName)
+                    val newsArticles = rssArticles.map { convertFromRssArticle(it) }
+                    allArticles.addAll(newsArticles)
+                    Logger.d("NewsRepository", "Fetched ${newsArticles.size} articles from $sourceName")
+                } catch (e: Exception) {
+                    Logger.e("NewsRepository", "Failed to fetch from $sourceName", e)
+                }
+            }
+            
+            val maxArticles = prefs.getInt("max_articles", 10)
+            val limitedArticles = allArticles.take(maxArticles)
+            Logger.i("NewsRepository", "Successfully fetched ${limitedArticles.size} RSS articles")
+            limitedArticles
+        } catch (e: Exception) {
+            Logger.e("NewsRepository", "Exception fetching RSS news", e)
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+    
+    /**
+     * Search RSS news by keyword
+     */
+    suspend fun searchRssNews(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
+        try {
+            Logger.d("NewsRepository", "Searching RSS news for: $query")
+            val allArticles = fetchRssNews()
+            
+            // Simple keyword search in title and description
+            val filtered = allArticles.filter { article ->
+                article.title.contains(query, ignoreCase = true) ||
+                (article.description?.contains(query, ignoreCase = true) == true)
+            }
+            
+            Logger.i("NewsRepository", "Found ${filtered.size} articles matching '$query'")
+            filtered
+        } catch (e: Exception) {
+            Logger.e("NewsRepository", "Exception searching RSS news", e)
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+    
+    private fun convertFromRssArticle(article: RssFeedParser.RssArticle): NewsArticle {
+        return NewsArticle(
+            id = UUID.randomUUID().toString(),
+            title = article.title,
+            description = article.description,
+            content = null,
+            url = article.link,
+            source = article.source,
+            publishedAt = article.pubDate ?: "",
+            imageUrl = null,
+            author = null
+        )
+    }
 }

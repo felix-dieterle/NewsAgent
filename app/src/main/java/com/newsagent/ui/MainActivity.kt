@@ -176,6 +176,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menu?.add(0, 1, 0, "Einstellungen")
         menu?.add(0, 2, 0, "Kostenlose Suche")
+        menu?.add(0, 4, 0, "RSS Nachrichten")
         
         // Add search view
         val searchItem = menu?.add(0, 3, 0, "Suchen")
@@ -188,7 +189,7 @@ class MainActivity : AppCompatActivity() {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 if (!query.isNullOrBlank()) {
-                    performFreeSearch(query)
+                    performRssSearch(query)
                 }
                 return true
             }
@@ -209,6 +210,10 @@ class MainActivity : AppCompatActivity() {
             }
             2 -> {
                 showFreeSearchDialog()
+                true
+            }
+            4 -> {
+                loadRssNews()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -342,6 +347,120 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(
                     this@MainActivity,
                     "Fehler beim Laden: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
+    private fun loadRssNews() {
+        lifecycleScope.launch {
+            try {
+                Logger.d("MainActivity", "Fetching RSS news...")
+                Toast.makeText(
+                    this@MainActivity,
+                    "Lade RSS-Nachrichten (100% kostenlos)...",
+                    Toast.LENGTH_SHORT
+                ).show()
+                
+                val newArticles = newsRepository.fetchRssNews()
+                Logger.i("MainActivity", "RSS fetch returned ${newArticles.size} articles")
+                
+                if (newArticles.isEmpty()) {
+                    Logger.w("MainActivity", "No RSS articles available")
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Keine RSS-Artikel verfügbar.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
+                
+                // Process articles
+                for (article in newArticles) {
+                    val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+                    
+                    if (prefs.getBoolean("enable_auto_summary", true)) {
+                        article.summary = aiSummaryService.generateSummary(article)
+                    }
+                    
+                    if (prefs.getBoolean("enable_credibility_check", true)) {
+                        article.credibilityScore = credibilityService.checkCredibility(article)
+                    }
+                }
+                
+                articles.clear()
+                articles.addAll(newArticles)
+                adapter.notifyDataSetChanged()
+                
+                Toast.makeText(
+                    this@MainActivity,
+                    "${newArticles.size} RSS-Artikel geladen",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Logger.e("MainActivity", "Error loading RSS news", e)
+                e.printStackTrace()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Fehler beim Laden: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
+    private fun performRssSearch(query: String) {
+        lifecycleScope.launch {
+            try {
+                Logger.d("MainActivity", "Performing RSS search for: $query")
+                Toast.makeText(
+                    this@MainActivity,
+                    "Suche in RSS-Feeds nach '$query'...",
+                    Toast.LENGTH_SHORT
+                ).show()
+                
+                val newArticles = newsRepository.searchRssNews(query)
+                Logger.i("MainActivity", "RSS search returned ${newArticles.size} articles")
+                
+                if (newArticles.isEmpty()) {
+                    Logger.w("MainActivity", "No articles found for query: $query")
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Keine Artikel für '$query' in RSS-Feeds gefunden.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
+                
+                // Process articles
+                for (article in newArticles) {
+                    val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+                    
+                    if (prefs.getBoolean("enable_auto_summary", true)) {
+                        article.summary = aiSummaryService.generateSummary(article)
+                    }
+                    
+                    if (prefs.getBoolean("enable_credibility_check", true)) {
+                        article.credibilityScore = credibilityService.checkCredibility(article)
+                    }
+                }
+                
+                articles.clear()
+                articles.addAll(newArticles)
+                adapter.notifyDataSetChanged()
+                
+                Toast.makeText(
+                    this@MainActivity,
+                    "${newArticles.size} Artikel gefunden",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Logger.e("MainActivity", "Error in RSS search", e)
+                e.printStackTrace()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Fehler bei der RSS-Suche: ${e.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }

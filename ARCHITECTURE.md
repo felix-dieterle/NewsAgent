@@ -200,18 +200,32 @@ language: String                  // News language filter
 - **Authentication**: API key required
 
 #### 2. GNews API (gnews.io) - Free Search
-- **Purpose**: Free news search without API key
+- **Purpose**: Free news search with simple registration
 - **Endpoints**:
   - `/api/v4/search` - Search news articles
   - `/api/v4/top-headlines` - Get top headlines
 - **Rate Limits**: 100 requests/day (free tier)
-- **Authentication**: None required (free tier)
+- **Authentication**: API token (free tier available)
 - **Features**:
   - Search by keyword
   - Filter by language and country
-  - No registration needed
+  - Simple registration process
 
-#### 3. OpenRouter (openrouter.ai)
+#### 3. RSS Feeds - Completely Free
+- **Purpose**: 100% free news without any registration
+- **Sources**:
+  - Tagesschau (https://www.tagesschau.de/xml/rss2/)
+  - Heise Online
+  - Spiegel Online
+  - Zeit Online
+- **Rate Limits**: None (public RSS feeds)
+- **Authentication**: None required
+- **Features**:
+  - Real-time German news
+  - No registration needed
+  - Keyword search within feeds
+
+#### 4. OpenRouter (openrouter.ai)
 - **Purpose**: AI text generation
 - **Endpoint**: `/api/v1/chat/completions`
 - **Models Used**: 
@@ -219,7 +233,7 @@ language: String                  // News language filter
   - Others configurable
 - **Authentication**: Bearer token
 
-#### 4. Credibility API (Custom)
+#### 5. Credibility API (Custom)
 - **Purpose**: Fact-checking and verification
 - **Endpoint**: `/api/v1/check`
 - **Fallback**: Heuristic checking if unavailable
