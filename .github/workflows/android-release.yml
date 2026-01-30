@@ -76,7 +76,7 @@ jobs:
         # Find the APK file (could be app-release.apk or app-release-unsigned.apk)
         APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
         mv "$APK_FILE" \
-           app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-${SUFFIX}.apk
+           app/build/outputs/apk/release/NewsAgent-v${{ steps.version.outputs.version_name }}-build${{ github.run_number }}-${SUFFIX}.apk
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
