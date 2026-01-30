@@ -41,11 +41,11 @@ class SettingsActivity : AppCompatActivity() {
             
             // Set current selection
             val currentSource = prefs.getString("news_source", "newsapi") ?: "newsapi"
-            selection = when (currentSource) {
+            setSelection(when (currentSource) {
                 "gnews" -> 1
                 "rss" -> 2
                 else -> 0
-            }
+            })
         }
         layout.addView(newsSourceSpinner)
         
