@@ -4,7 +4,7 @@ Dieses Dokument beschreibt, wie Sie eine externe Glaubwürdigkeitsprüfungs-API 
 
 ## Übersicht
 
-NewsAgent bietet eine flexible Schnittstelle zur Integration von Fact-Checking- und Glaubwürdigkeitsprüfungs-APIs. Die App kann sowohl mit externen APIs als auch mit heuristischen lokalen Checks arbeiten.
+NewsAgent bietet eine flexible Schnittstelle zur Integration von Fact-Checking- und Glaubwürdigkeitsprüfungs-APIs. Die App ist vorkonfiguriert für newscheck123.de (noch nicht online) und kann sowohl mit externen APIs als auch mit heuristischen lokalen Checks arbeiten.
 
 ## API-Interface
 
@@ -48,29 +48,35 @@ interface CredibilityApi {
 
 ## Empfohlene Fact-Checking APIs
 
-### 1. ClaimBuster API
+### 1. NewsCheck123 (Geplant)
+- **URL**: https://newscheck123.de/
+- **Status**: Noch nicht online - wird derzeit entwickelt
+- **Features**: Deutsche Nachrichtenprüfung, Fact-Checking
+- **Hinweis**: Die App ist bereits für diese API vorkonfiguriert
+
+### 2. ClaimBuster API
 - **URL**: https://idir.uta.edu/claimbuster/
 - **Features**: Claim-Erkennung, Fact-Checking
 - **Preis**: Akademisch kostenlos, kommerzielle Lizenz verfügbar
 
-### 2. Google Fact Check Tools API
+### 3. Google Fact Check Tools API
 - **URL**: https://toolbox.google.com/factcheck/apis
 - **Features**: Überprüfung von Behauptungen gegen Fact-Check-Datenbank
 - **Preis**: Kostenlos mit Limits
 
-### 3. Full Fact API (UK)
+### 4. Full Fact API (UK)
 - **URL**: https://fullfact.org/
 - **Features**: Automated fact checking
 - **Preis**: Auf Anfrage
 
-### 4. Custom API Integration
+### 5. Custom API Integration
 
 Für eine eigene API-Implementierung:
 
 ```kotlin
 // 1. Update die Base URL in SharedPreferences
 val prefs = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
-prefs.edit().putString("credibility_api_url", "https://your-api.com/").apply()
+prefs.edit().putString("credibility_api_url", "https://newscheck123.de/").apply()
 
 // 2. Stellen Sie sicher, dass Ihre API das erwartete Format zurückgibt
 // 3. Optional: Erweitern Sie CredibilityApi für zusätzliche Endpoints
@@ -105,7 +111,7 @@ class CustomCredibilityService(private val context: Context) {
     
     private val api: CustomCredibilityApi by lazy {
         Retrofit.Builder()
-            .baseUrl("https://your-credibility-api.com/")
+            .baseUrl("https://newscheck123.de/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(CustomCredibilityApi::class.java)
@@ -252,7 +258,7 @@ class MockCredibilityApi : CredibilityApi {
 // Programmatisch konfigurieren
 val prefs = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
 prefs.edit().apply {
-    putString("credibility_api_url", "https://your-api.com/")
+    putString("credibility_api_url", "https://newscheck123.de/")
     putString("credibility_api_key", "your-api-key")
     putBoolean("enable_credibility_check", true)
     apply()

@@ -76,9 +76,23 @@ class NewsRepository(private val context: Context) {
     }
     
     /**
-     * Fetch top headlines with caching
+     * Fetch top headlines with caching - routes to appropriate source based on settings
      */
     suspend fun fetchTopHeadlines(): List<NewsArticle> = withContext(Dispatchers.IO) {
+        val newsSource = prefs.getString("news_source", "newsapi") ?: "newsapi"
+        Logger.d("NewsRepository", "Fetching headlines from source: $newsSource")
+        
+        when (newsSource) {
+            "gnews" -> fetchTopHeadlinesFree()
+            "rss" -> fetchRssNews()
+            else -> fetchTopHeadlinesFromNewsApi()
+        }
+    }
+    
+    /**
+     * Fetch top headlines from NewsAPI.org with caching
+     */
+    private suspend fun fetchTopHeadlinesFromNewsApi(): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
             val apiKey = prefs.getString("news_api_key", "") ?: ""
             if (apiKey.isEmpty()) {

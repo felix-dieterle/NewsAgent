@@ -1,18 +1,30 @@
 # Example Configuration
-# Kopieren Sie diese Datei zu local.properties und fügen Sie Ihre echten API-Schlüssel ein
-# WARNUNG: Committen Sie local.properties NIEMALS zu Git!
+# Diese Datei zeigt die benötigten API-Token für die App
+# WICHTIG: Diese Werte werden in der App-UI unter Einstellungen konfiguriert,
+# nicht in dieser Datei. Dies ist nur zur Dokumentation.
 
-# News API Configuration
-# Holen Sie sich einen kostenlosen Schlüssel von https://newsapi.org
-news.api.key=YOUR_NEWS_API_KEY_HERE
+# News Source Configuration
+# Wählen Sie in der App EINE der folgenden Quellen:
+# 1. NewsAPI.org: https://newsapi.org (100 Anfragen/Tag, benötigt Token)
+# 2. GNews.io: https://gnews.io (100 Anfragen/Tag, benötigt Token)
+# 3. RSS Feeds: Kostenlos, kein Token benötigt
+#
+# WICHTIG: Der Token muss von der gewählten Quelle stammen!
+# NewsAPI.org Token funktioniert nur mit NewsAPI.org
+# GNews.io Token funktioniert nur mit GNews.io
+news.source=newsapi  # oder "gnews" oder "rss"
+news.api.token=YOUR_NEWS_API_TOKEN_FROM_SELECTED_SOURCE
 
-# OpenRouter API Configuration
-# Holen Sie sich einen Schlüssel von https://openrouter.ai
-openrouter.api.key=YOUR_OPENROUTER_API_KEY_HERE
+# AI API Configuration
+# OpenRouter für KI-Zusammenfassungen: https://openrouter.ai
+# Tragen Sie den Token in der App unter "Einstellungen" → "AI API Token" ein
+ai.api.token=YOUR_AI_API_TOKEN_HERE
 
-# Optional: Custom Credibility API
-# Konfigurieren Sie Ihre eigene Glaubwürdigkeitsprüfungs-API
-#credibility.api.url=https://your-credibility-api.com/
+# Optional: Credibility API
+# Vorkonfiguriert für newscheck123.de (noch nicht online)
+# Die App verwendet heuristische Prüfungen als Fallback
+# Kann in SharedPreferences angepasst werden (Schlüssel: "credibility_api_url")
+credibility.api.url=https://newscheck123.de/
 #credibility.api.key=YOUR_CREDIBILITY_API_KEY_HERE
 
 # App Configuration

@@ -26,41 +26,71 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(16, 16, 16, 16)
         }
         
-        // News API Key
+        // News Source Selection
         layout.addView(TextView(this).apply {
-            text = "News API Schlüssel"
+            text = "Nachrichtenquelle"
             textSize = 18f
             setPadding(0, 16, 0, 8)
         })
         
-        val newsApiKeyInput = EditText(this).apply {
-            hint = "Geben Sie Ihren News API Schlüssel ein"
-            setText(prefs.getString("news_api_key", ""))
+        val newsSourceSpinner = Spinner(this).apply {
+            val sources = arrayOf("NewsAPI.org", "GNews.io", "RSS Feeds (kostenlos)")
+            val adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_spinner_item, sources)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setAdapter(adapter)
+            
+            // Set current selection
+            val currentSource = prefs.getString("news_source", "newsapi") ?: "newsapi"
+            setSelection(when (currentSource) {
+                "gnews" -> 1
+                "rss" -> 2
+                else -> 0
+            })
         }
-        layout.addView(newsApiKeyInput)
+        layout.addView(newsSourceSpinner)
         
         layout.addView(TextView(this).apply {
-            text = "Erhalten Sie einen kostenlosen Schlüssel auf https://newsapi.org"
+            text = "Wählen Sie Ihre bevorzugte Nachrichtenquelle"
             textSize = 12f
             setTextColor(0xFF666666.toInt())
             setPadding(0, 4, 0, 16)
         })
         
-        // OpenRouter API Key
+        // News API Token
         layout.addView(TextView(this).apply {
-            text = "OpenRouter API Schlüssel"
+            text = "News API Token"
             textSize = 18f
             setPadding(0, 16, 0, 8)
         })
         
-        val openRouterApiKeyInput = EditText(this).apply {
-            hint = "Geben Sie Ihren OpenRouter API Schlüssel ein"
-            setText(prefs.getString("openrouter_api_key", ""))
+        val newsApiTokenInput = EditText(this).apply {
+            hint = "Token für die gewählte Quelle (nicht für RSS benötigt)"
+            setText(prefs.getString("news_api_token", ""))
         }
-        layout.addView(openRouterApiKeyInput)
+        layout.addView(newsApiTokenInput)
         
         layout.addView(TextView(this).apply {
-            text = "Erhalten Sie einen Schlüssel auf https://openrouter.ai"
+            text = "NewsAPI.org oder GNews.io - holen Sie Token von der gewählten Quelle"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 16)
+        })
+        
+        // AI API Token (OpenRouter for summaries)
+        layout.addView(TextView(this).apply {
+            text = "AI API Token"
+            textSize = 18f
+            setPadding(0, 16, 0, 8)
+        })
+        
+        val aiApiTokenInput = EditText(this).apply {
+            hint = "Geben Sie Ihren AI API Token ein"
+            setText(prefs.getString("openrouter_api_key", ""))
+        }
+        layout.addView(aiApiTokenInput)
+        
+        layout.addView(TextView(this).apply {
+            text = "OpenRouter für KI-Zusammenfassungen - https://openrouter.ai"
             textSize = 12f
             setTextColor(0xFF666666.toInt())
             setPadding(0, 4, 0, 16)
@@ -169,9 +199,15 @@ class SettingsActivity : AppCompatActivity() {
             text = "Einstellungen speichern"
             setPadding(0, 32, 0, 0)
             setOnClickListener {
+                val selectedSource = when (newsSourceSpinner.selectedItemPosition) {
+                    1 -> "gnews"
+                    2 -> "rss"
+                    else -> "newsapi"
+                }
                 saveSettings(
-                    newsApiKeyInput.text.toString(),
-                    openRouterApiKeyInput.text.toString(),
+                    newsApiTokenInput.text.toString(),
+                    aiApiTokenInput.text.toString(),
+                    selectedSource,
                     intervalInput.text.toString().toIntOrNull() ?: 60,
                     notificationsCheckbox.isChecked,
                     autoSummaryCheckbox.isChecked,
@@ -188,8 +224,9 @@ class SettingsActivity : AppCompatActivity() {
     }
     
     private fun saveSettings(
-        newsApiKey: String,
-        openRouterApiKey: String,
+        newsApiToken: String,
+        aiApiToken: String,
+        newsSource: String,
         intervalMinutes: Int,
         enableNotifications: Boolean,
         enableAutoSummary: Boolean,
@@ -199,8 +236,26 @@ class SettingsActivity : AppCompatActivity() {
         Logger.d("SettingsActivity", "Saving settings...")
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         prefs.edit().apply {
-            putString("news_api_key", newsApiKey)
-            putString("openrouter_api_key", openRouterApiKey)
+            // Save news source selection
+            putString("news_source", newsSource)
+            
+            // Save token based on selected source
+            when (newsSource) {
+                "newsapi" -> {
+                    putString("news_api_key", newsApiToken)
+                    putString("news_api_token", newsApiToken)
+                }
+                "gnews" -> {
+                    putString("gnews_api_token", newsApiToken)
+                    putString("news_api_token", newsApiToken)
+                }
+                "rss" -> {
+                    // RSS doesn't need a token, but store the selection
+                    putString("news_api_token", "")
+                }
+            }
+            
+            putString("openrouter_api_key", aiApiToken)
             putInt("update_interval_minutes", intervalMinutes)
             putBoolean("enable_notifications", enableNotifications)
             putBoolean("enable_auto_summary", enableAutoSummary)
