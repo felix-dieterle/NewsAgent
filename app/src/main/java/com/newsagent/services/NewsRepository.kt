@@ -104,7 +104,7 @@ class NewsRepository(private val context: Context) {
         
         val sourceName = when (newsSource) {
             "gnews" -> "GNews"
-            "rss" -> "RSS Feeds (${RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")})"
+            "rss" -> "RSS Feeds (${getRssFeedSourceNames()})"
             else -> "NewsAPI"
         }
         
@@ -116,6 +116,34 @@ class NewsRepository(private val context: Context) {
      */
     fun getRssFeedSourceNames(): String {
         return RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+    }
+    
+    /**
+     * Get status message for GNews search
+     */
+    fun getGNewsSearchStatusMessage(query: String): String {
+        val language = prefs.getString("language", "de") ?: "de"
+        val country = prefs.getString("country", "de") ?: "de"
+        val maxArticles = prefs.getInt("max_articles", 10)
+        return "Suche nach '$query'...\nQuelle: GNews | Land: $country | Sprache: $language | Max: $maxArticles"
+    }
+    
+    /**
+     * Get status message for RSS news loading
+     */
+    fun getRssLoadStatusMessage(): String {
+        val feedSources = getRssFeedSourceNames()
+        val maxArticles = prefs.getInt("max_articles", 10)
+        return "Lade RSS-Nachrichten (100% kostenlos)...\nQuellen: $feedSources\nMax: $maxArticles"
+    }
+    
+    /**
+     * Get status message for RSS search
+     */
+    fun getRssSearchStatusMessage(query: String): String {
+        val feedSources = getRssFeedSourceNames()
+        val maxArticles = prefs.getInt("max_articles", 10)
+        return "Suche in RSS-Feeds nach '$query'...\nQuellen: $feedSources\nMax: $maxArticles"
     }
     
     /**
@@ -340,7 +368,7 @@ class NewsRepository(private val context: Context) {
      */
     suspend fun fetchRssNews(): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
-            val feedSources = RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+            val feedSources = getRssFeedSourceNames()
             Logger.i("NewsRepository", "Querying RSS feeds: $feedSources")
             
             val parser = RssFeedParser()
@@ -397,7 +425,7 @@ class NewsRepository(private val context: Context) {
      */
     suspend fun searchRssNews(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
-            val feedSources = RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+            val feedSources = getRssFeedSourceNames()
             Logger.i("NewsRepository", "Searching RSS feeds for query='$query' in sources: $feedSources")
             
             val allArticles = fetchRssNews()

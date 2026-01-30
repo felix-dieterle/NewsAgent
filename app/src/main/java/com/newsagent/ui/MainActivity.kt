@@ -12,7 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.newsagent.api.RssFeedParser
 import com.newsagent.models.NewsArticle
 import com.newsagent.services.*
 import com.newsagent.utils.Logger
@@ -271,14 +270,9 @@ class MainActivity : AppCompatActivity() {
             try {
                 Logger.d("MainActivity", "Performing free search for: $query")
                 
-                val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                val language = prefs.getString("language", "de") ?: "de"
-                val country = prefs.getString("country", "de") ?: "de"
-                val maxArticles = prefs.getInt("max_articles", 10)
-                
                 Toast.makeText(
                     this@MainActivity,
-                    "Suche nach '$query'...\nQuelle: GNews | Land: $country | Sprache: $language | Max: $maxArticles",
+                    newsRepository.getGNewsSearchStatusMessage(query),
                     Toast.LENGTH_LONG
                 ).show()
                 
@@ -371,13 +365,9 @@ class MainActivity : AppCompatActivity() {
             try {
                 Logger.d("MainActivity", "Fetching RSS news...")
                 
-                val feedSources = newsRepository.getRssFeedSourceNames()
-                val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                val maxArticles = prefs.getInt("max_articles", 10)
-                
                 Toast.makeText(
                     this@MainActivity,
-                    "Lade RSS-Nachrichten (100% kostenlos)...\nQuellen: $feedSources\nMax: $maxArticles",
+                    newsRepository.getRssLoadStatusMessage(),
                     Toast.LENGTH_LONG
                 ).show()
                 
@@ -423,13 +413,9 @@ class MainActivity : AppCompatActivity() {
             try {
                 Logger.d("MainActivity", "Performing RSS search for: $query")
                 
-                val feedSources = newsRepository.getRssFeedSourceNames()
-                val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
-                val maxArticles = prefs.getInt("max_articles", 10)
-                
                 Toast.makeText(
                     this@MainActivity,
-                    "Suche in RSS-Feeds nach '$query'...\nQuellen: $feedSources\nMax: $maxArticles",
+                    newsRepository.getRssSearchStatusMessage(query),
                     Toast.LENGTH_LONG
                 ).show()
                 
