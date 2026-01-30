@@ -112,6 +112,13 @@ class NewsRepository(private val context: Context) {
     }
     
     /**
+     * Get a comma-separated list of RSS feed source names
+     */
+    fun getRssFeedSourceNames(): String {
+        return RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+    }
+    
+    /**
      * Fetch top headlines from NewsAPI.org with caching
      */
     private suspend fun fetchTopHeadlinesFromNewsApi(): List<NewsArticle> = withContext(Dispatchers.IO) {

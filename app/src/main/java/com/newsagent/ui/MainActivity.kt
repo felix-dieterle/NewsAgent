@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.newsagent.api.RssFeedParser
 import com.newsagent.models.NewsArticle
 import com.newsagent.services.*
 import com.newsagent.utils.Logger
@@ -370,7 +371,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 Logger.d("MainActivity", "Fetching RSS news...")
                 
-                val feedSources = com.newsagent.api.RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+                val feedSources = newsRepository.getRssFeedSourceNames()
                 val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
                 val maxArticles = prefs.getInt("max_articles", 10)
                 
@@ -422,7 +423,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 Logger.d("MainActivity", "Performing RSS search for: $query")
                 
-                val feedSources = com.newsagent.api.RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+                val feedSources = newsRepository.getRssFeedSourceNames()
                 val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
                 val maxArticles = prefs.getInt("max_articles", 10)
                 
