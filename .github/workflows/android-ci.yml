@@ -43,7 +43,7 @@ jobs:
     - name: Rename Debug APK
       run: |
         mv app/build/outputs/apk/debug/app-debug.apk \
-           app/build/outputs/apk/debug/NewsAgent-v${{ steps.version.outputs.version_name }}-debug.apk
+           app/build/outputs/apk/debug/NewsAgent-v${{ steps.version.outputs.version_name }}-build${{ github.run_number }}-debug.apk
       
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
