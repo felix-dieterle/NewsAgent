@@ -80,13 +80,35 @@ class NewsRepository(private val context: Context) {
      */
     suspend fun fetchTopHeadlines(): List<NewsArticle> = withContext(Dispatchers.IO) {
         val newsSource = prefs.getString("news_source", "newsapi") ?: "newsapi"
-        Logger.d("NewsRepository", "Fetching headlines from source: $newsSource")
+        val country = prefs.getString("country", "de") ?: "de"
+        val language = prefs.getString("language", "de") ?: "de"
+        val maxArticles = prefs.getInt("max_articles", 10)
+        
+        Logger.i("NewsRepository", "Fetching headlines from source: $newsSource (country=$country, language=$language, max=$maxArticles)")
         
         when (newsSource) {
             "gnews" -> fetchTopHeadlinesFree()
             "rss" -> fetchRssNews()
             else -> fetchTopHeadlinesFromNewsApi()
         }
+    }
+    
+    /**
+     * Get a human-readable description of the current search configuration
+     */
+    fun getSearchStatusMessage(): String {
+        val newsSource = prefs.getString("news_source", "newsapi") ?: "newsapi"
+        val country = prefs.getString("country", "de") ?: "de"
+        val language = prefs.getString("language", "de") ?: "de"
+        val maxArticles = prefs.getInt("max_articles", 10)
+        
+        val sourceName = when (newsSource) {
+            "gnews" -> "GNews"
+            "rss" -> "RSS Feeds (${RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")})"
+            else -> "NewsAPI"
+        }
+        
+        return "Quelle: $sourceName | Land: $country | Sprache: $language | Max: $maxArticles"
     }
     
     /**
@@ -117,7 +139,7 @@ class NewsRepository(private val context: Context) {
                 return@withContext emptyList<NewsArticle>()
             }
             
-            Logger.d("NewsRepository", "Fetching top headlines for country=$country, pageSize=$pageSize")
+            Logger.i("NewsRepository", "Querying NewsAPI: country=$country, pageSize=$pageSize")
             
             val response = newsApi.getTopHeadlines(
                 apiKey = apiKey,
@@ -156,6 +178,8 @@ class NewsRepository(private val context: Context) {
             
             val language = prefs.getString("language", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
+            
+            Logger.i("NewsRepository", "Querying NewsAPI search: query='$query', language=$language, pageSize=$pageSize")
             
             // Check cache first
             val cacheKey = "search_${query}_${language}_${pageSize}"
@@ -224,7 +248,7 @@ class NewsRepository(private val context: Context) {
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
             
-            Logger.d("NewsRepository", "Searching free news for query='$query', language=$language")
+            Logger.i("NewsRepository", "Querying GNews search: query='$query', language=$language, country=$country, maxResults=$pageSize")
             
             val response = freeNewsApi.searchGNews(
                 query = query,
@@ -265,7 +289,7 @@ class NewsRepository(private val context: Context) {
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
             
-            Logger.d("NewsRepository", "Fetching free top headlines for country=$country, language=$language")
+            Logger.i("NewsRepository", "Querying GNews headlines: language=$language, country=$country, maxResults=$pageSize")
             
             val response = freeNewsApi.getGNewsHeadlines(
                 apiToken = apiToken,
@@ -309,7 +333,9 @@ class NewsRepository(private val context: Context) {
      */
     suspend fun fetchRssNews(): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
-            Logger.d("NewsRepository", "Fetching RSS news from public feeds")
+            val feedSources = RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+            Logger.i("NewsRepository", "Querying RSS feeds: $feedSources")
+            
             val parser = RssFeedParser()
             val allArticles = mutableListOf<NewsArticle>()
             val httpClient = OkHttpClient.Builder()
@@ -323,6 +349,7 @@ class NewsRepository(private val context: Context) {
             // Fetch from multiple RSS feeds
             for ((sourceName, feedUrl) in RssFeedParser.GERMAN_RSS_FEEDS) {
                 try {
+                    Logger.d("NewsRepository", "Fetching from RSS source: $sourceName ($feedUrl)")
                     val request = okhttp3.Request.Builder()
                         .url(feedUrl)
                         .build()
@@ -334,22 +361,22 @@ class NewsRepository(private val context: Context) {
                         val newsArticles = rssArticles.map { convertFromRssArticle(it) }
                         allArticles.addAll(newsArticles)
                         successCount++
-                        Logger.d("NewsRepository", "Fetched ${newsArticles.size} articles from $sourceName")
+                        Logger.i("NewsRepository", "✓ $sourceName: ${newsArticles.size} articles fetched")
                     } else {
                         failCount++
-                        Logger.w("NewsRepository", "Failed to fetch from $sourceName: ${response.code}")
+                        Logger.w("NewsRepository", "✗ $sourceName: Failed (${response.code})")
                     }
                 } catch (e: Exception) {
                     failCount++
-                    Logger.e("NewsRepository", "Exception fetching from $sourceName", e)
+                    Logger.e("NewsRepository", "✗ $sourceName: Exception - ${e.message}", e)
                 }
             }
             
-            Logger.i("NewsRepository", "RSS fetch complete: $successCount succeeded, $failCount failed")
+            Logger.i("NewsRepository", "RSS fetch complete: $successCount succeeded, $failCount failed (Total articles: ${allArticles.size})")
             
             val maxArticles = prefs.getInt("max_articles", 10)
             val limitedArticles = allArticles.take(maxArticles)
-            Logger.i("NewsRepository", "Successfully fetched ${limitedArticles.size} RSS articles")
+            Logger.i("NewsRepository", "Returning ${limitedArticles.size} RSS articles (limited from ${allArticles.size})")
             limitedArticles
         } catch (e: Exception) {
             Logger.e("NewsRepository", "Exception fetching RSS news", e)
@@ -363,7 +390,9 @@ class NewsRepository(private val context: Context) {
      */
     suspend fun searchRssNews(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
-            Logger.d("NewsRepository", "Searching RSS news for: $query")
+            val feedSources = RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+            Logger.i("NewsRepository", "Searching RSS feeds for query='$query' in sources: $feedSources")
+            
             val allArticles = fetchRssNews()
             
             // Simple keyword search in title and description
@@ -372,7 +401,7 @@ class NewsRepository(private val context: Context) {
                 (article.description?.contains(query, ignoreCase = true) == true)
             }
             
-            Logger.i("NewsRepository", "Found ${filtered.size} articles matching '$query'")
+            Logger.i("NewsRepository", "RSS search complete: Found ${filtered.size} articles matching '$query' (out of ${allArticles.size} total)")
             filtered
         } catch (e: Exception) {
             Logger.e("NewsRepository", "Exception searching RSS news", e)

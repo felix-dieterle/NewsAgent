@@ -98,6 +98,14 @@ class MainActivity : AppCompatActivity() {
     private fun loadNews() {
         lifecycleScope.launch {
             try {
+                // Show search status to user
+                val statusMessage = newsRepository.getSearchStatusMessage()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Suche wird gestartet...\n$statusMessage",
+                    Toast.LENGTH_LONG
+                ).show()
+                
                 Logger.d("MainActivity", "Fetching headlines...")
                 val newArticles = newsRepository.fetchTopHeadlines()
                 Logger.i("MainActivity", "Fetched ${newArticles.size} articles")
@@ -261,10 +269,16 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Logger.d("MainActivity", "Performing free search for: $query")
+                
+                val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+                val language = prefs.getString("language", "de") ?: "de"
+                val country = prefs.getString("country", "de") ?: "de"
+                val maxArticles = prefs.getInt("max_articles", 10)
+                
                 Toast.makeText(
                     this@MainActivity,
-                    "Suche nach '$query'...",
-                    Toast.LENGTH_SHORT
+                    "Suche nach '$query'...\nQuelle: GNews | Land: $country | Sprache: $language | Max: $maxArticles",
+                    Toast.LENGTH_LONG
                 ).show()
                 
                 val newArticles = newsRepository.searchNewsFree(query)
@@ -355,10 +369,15 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Logger.d("MainActivity", "Fetching RSS news...")
+                
+                val feedSources = com.newsagent.api.RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+                val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+                val maxArticles = prefs.getInt("max_articles", 10)
+                
                 Toast.makeText(
                     this@MainActivity,
-                    "Lade RSS-Nachrichten (100% kostenlos)...",
-                    Toast.LENGTH_SHORT
+                    "Lade RSS-Nachrichten (100% kostenlos)...\nQuellen: $feedSources\nMax: $maxArticles",
+                    Toast.LENGTH_LONG
                 ).show()
                 
                 val newArticles = newsRepository.fetchRssNews()
@@ -402,10 +421,15 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Logger.d("MainActivity", "Performing RSS search for: $query")
+                
+                val feedSources = com.newsagent.api.RssFeedParser.GERMAN_RSS_FEEDS.keys.joinToString(", ")
+                val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+                val maxArticles = prefs.getInt("max_articles", 10)
+                
                 Toast.makeText(
                     this@MainActivity,
-                    "Suche in RSS-Feeds nach '$query'...",
-                    Toast.LENGTH_SHORT
+                    "Suche in RSS-Feeds nach '$query'...\nQuellen: $feedSources\nMax: $maxArticles",
+                    Toast.LENGTH_LONG
                 ).show()
                 
                 val newArticles = newsRepository.searchRssNews(query)
