@@ -98,6 +98,14 @@ class MainActivity : AppCompatActivity() {
     private fun loadNews() {
         lifecycleScope.launch {
             try {
+                // Show search status to user
+                val statusMessage = newsRepository.getSearchStatusMessage()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Suche wird gestartet...\n$statusMessage",
+                    Toast.LENGTH_LONG
+                ).show()
+                
                 Logger.d("MainActivity", "Fetching headlines...")
                 val newArticles = newsRepository.fetchTopHeadlines()
                 Logger.i("MainActivity", "Fetched ${newArticles.size} articles")
@@ -261,10 +269,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Logger.d("MainActivity", "Performing free search for: $query")
+                
                 Toast.makeText(
                     this@MainActivity,
-                    "Suche nach '$query'...",
-                    Toast.LENGTH_SHORT
+                    newsRepository.getGNewsSearchStatusMessage(query),
+                    Toast.LENGTH_LONG
                 ).show()
                 
                 val newArticles = newsRepository.searchNewsFree(query)
@@ -355,10 +364,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Logger.d("MainActivity", "Fetching RSS news...")
+                
                 Toast.makeText(
                     this@MainActivity,
-                    "Lade RSS-Nachrichten (100% kostenlos)...",
-                    Toast.LENGTH_SHORT
+                    newsRepository.getRssLoadStatusMessage(),
+                    Toast.LENGTH_LONG
                 ).show()
                 
                 val newArticles = newsRepository.fetchRssNews()
@@ -402,10 +412,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Logger.d("MainActivity", "Performing RSS search for: $query")
+                
                 Toast.makeText(
                     this@MainActivity,
-                    "Suche in RSS-Feeds nach '$query'...",
-                    Toast.LENGTH_SHORT
+                    newsRepository.getRssSearchStatusMessage(query),
+                    Toast.LENGTH_LONG
                 ).show()
                 
                 val newArticles = newsRepository.searchRssNews(query)
