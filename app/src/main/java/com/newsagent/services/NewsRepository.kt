@@ -283,6 +283,20 @@ class NewsRepository(private val context: Context) {
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
             
+            // Check cache first
+            val cacheKey = "gnews_search_${query}_${language}_${country}_${pageSize}"
+            cacheManager.getCachedArticles(cacheKey)?.let { cached ->
+                Logger.d("NewsRepository", "Returning ${cached.size} cached GNews search results")
+                return@withContext cached
+            }
+            
+            // Check rate limit
+            if (!rateLimiter.allowRequest("gnews_api")) {
+                val remaining = rateLimiter.getRemainingRequests("gnews_api")
+                Logger.w("NewsRepository", "GNews rate limit reached. Remaining requests: $remaining")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
             Logger.i("NewsRepository", "Querying GNews search: query='$query', language=$language, country=$country, maxResults=$pageSize")
             
             val response = freeNewsApi.searchGNews(
@@ -296,6 +310,10 @@ class NewsRepository(private val context: Context) {
             if (response.isSuccessful && response.body() != null) {
                 val articles = response.body()!!.articles.map { convertFromGNewsArticle(it) }
                 Logger.i("NewsRepository", "Successfully fetched ${articles.size} articles (free search)")
+                
+                // Cache the results
+                cacheManager.cacheArticles(cacheKey, articles)
+                
                 articles
             } else {
                 Logger.e("NewsRepository", "Free API request failed: ${response.code()} - ${response.message()}")
@@ -324,6 +342,20 @@ class NewsRepository(private val context: Context) {
             val country = prefs.getString("country", "de") ?: "de"
             val pageSize = prefs.getInt("max_articles", 10)
             
+            // Check cache first
+            val cacheKey = "gnews_headlines_${language}_${country}_${pageSize}"
+            cacheManager.getCachedArticles(cacheKey)?.let { cached ->
+                Logger.d("NewsRepository", "Returning ${cached.size} cached GNews headlines")
+                return@withContext cached
+            }
+            
+            // Check rate limit
+            if (!rateLimiter.allowRequest("gnews_api")) {
+                val remaining = rateLimiter.getRemainingRequests("gnews_api")
+                Logger.w("NewsRepository", "GNews rate limit reached. Remaining requests: $remaining")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
             Logger.i("NewsRepository", "Querying GNews headlines: language=$language, country=$country, maxResults=$pageSize")
             
             val response = freeNewsApi.getGNewsHeadlines(
@@ -336,6 +368,10 @@ class NewsRepository(private val context: Context) {
             if (response.isSuccessful && response.body() != null) {
                 val articles = response.body()!!.articles.map { convertFromGNewsArticle(it) }
                 Logger.i("NewsRepository", "Successfully fetched ${articles.size} free headlines")
+                
+                // Cache the results
+                cacheManager.cacheArticles(cacheKey, articles)
+                
                 articles
             } else {
                 Logger.e("NewsRepository", "Free API request failed: ${response.code()} - ${response.message()}")
@@ -426,6 +462,15 @@ class NewsRepository(private val context: Context) {
     suspend fun searchRssNews(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
             val feedSources = getRssFeedSourceNames()
+            val maxArticles = prefs.getInt("max_articles", 10)
+            
+            // Check cache first - RSS search results are cached for faster retrieval
+            val cacheKey = "rss_search_${query}_${maxArticles}"
+            cacheManager.getCachedArticles(cacheKey)?.let { cached ->
+                Logger.d("NewsRepository", "Returning ${cached.size} cached RSS search results for '$query'")
+                return@withContext cached
+            }
+            
             Logger.i("NewsRepository", "Searching RSS feeds for query='$query' in sources: $feedSources")
             
             val allArticles = fetchRssNews()
@@ -437,6 +482,10 @@ class NewsRepository(private val context: Context) {
             }
             
             Logger.i("NewsRepository", "RSS search complete: Found ${filtered.size} articles matching '$query' (out of ${allArticles.size} total)")
+            
+            // Cache the search results
+            cacheManager.cacheArticles(cacheKey, filtered)
+            
             filtered
         } catch (e: Exception) {
             Logger.e("NewsRepository", "Exception searching RSS news", e)
