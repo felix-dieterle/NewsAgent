@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.view.View
+import android.view.ViewGroup
 
 /**
  * Small circular indicator showing API rate limit status
@@ -30,7 +31,7 @@ class RateLimitIndicatorView(context: Context) : View(context) {
         // Convert DP to pixels for consistent size across devices
         val density = context.resources.displayMetrics.density
         val sizePixels = (INDICATOR_SIZE_DP * density).toInt()
-        layoutParams = LayoutParams(sizePixels, sizePixels)
+        layoutParams = ViewGroup.LayoutParams(sizePixels, sizePixels)
     }
     
     /**
