@@ -27,6 +27,13 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
   - Parallele Artikelverarbeitung
   - 60-70% Reduzierung der API-Kosten
   - Bis zu 80% schnellere Artikelverarbeitung
+- **🎯 Intelligente Such-Optimierungen** (NEU):
+  - **Such-Caching**: Wiederholte Suchen instant aus Cache (70-90% API-Reduktion)
+  - **Such-Drosselung**: Automatisches Debouncing und Rate-Limiting
+  - **Smart Source Selection**: Automatische Wahl der besten Nachrichtenquelle
+  - **Artikel-Deduplizierung**: Entfernt Duplikate vor teurer AI-Verarbeitung
+  - **AI-Modus**: Umschaltbar zwischen Kosten-Optimierung und Qualitäts-Maximierung
+  - Details: Siehe [INTELLIGENT_SEARCH_OPTIMIZATION.md](INTELLIGENT_SEARCH_OPTIMIZATION.md)
 
 ## Architektur
 
@@ -51,11 +58,14 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 - `CredibilityCheckService.kt` - Glaubwürdigkeitsprüfung (Heuristik + API)
 - `TextToSpeechService.kt` - Audio-Zusammenfassungen
 - `NewsUpdateWorker.kt` - Hintergrund-Worker für periodische Updates
+- `SearchStrategySelector.kt` - Intelligente Such-Quellwahl (NEU)
 
 #### 🛠️ Utilities
 - `cache/CacheManager.kt` - Multi-Level-Caching mit TTL-Verwaltung
 - `utils/RateLimiter.kt` - API-Quota-Schutz und Kostenoptimierung
 - `utils/Logger.kt` - Umfassendes Logging-System
+- `utils/SearchThrottler.kt` - Such-Drosselung und Debouncing (NEU)
+- `utils/ArticleDeduplicator.kt` - Duplikat-Entfernung (NEU)
 
 #### 🎨 UI (`ui/`)
 - `MainActivity.kt` - Hauptansicht mit Nachrichtenliste
