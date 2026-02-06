@@ -8,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.newsagent.services.NewsUpdateWorker
 import com.newsagent.utils.Logger
+import com.newsagent.utils.RateLimiter
 import java.io.File
 
 /**
@@ -163,6 +164,27 @@ class SettingsActivity : AppCompatActivity() {
         }
         layout.addView(maxArticlesInput)
         
+        // API Rate Limits Section
+        layout.addView(View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                2
+            ).apply {
+                setMargins(0, 32, 0, 16)
+            }
+            setBackgroundColor(0xFFCCCCCC.toInt())
+        })
+        
+        layout.addView(TextView(this).apply {
+            text = "API Rate Limits"
+            textSize = 20f
+            setPadding(0, 8, 0, 16)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        })
+        
+        // Add rate limit indicators and details
+        addRateLimitStatus(layout)
+        
         // Divider
         layout.addView(View(this).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -237,6 +259,101 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(scrollView)
         
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
+    
+    private fun addRateLimitStatus(layout: LinearLayout) {
+        val rateLimiter = RateLimiter.getInstance()
+        
+        // NewsAPI
+        val newsApiStats = rateLimiter.getStats("news_api")
+        newsApiStats?.let { stats ->
+            val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
+            val percentInt = (usagePercent * 100).toInt()
+            
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 8, 0, 8)
+            }
+            
+            val indicator = RateLimitIndicatorView(this).apply {
+                setUsagePercent(usagePercent)
+            }
+            container.addView(indicator)
+            
+            container.addView(View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(16, 1)
+            })
+            
+            container.addView(TextView(this).apply {
+                text = "NewsAPI: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                textSize = 14f
+            })
+            
+            layout.addView(container)
+        }
+        
+        // GNews
+        val gnewsStats = rateLimiter.getStats("gnews_api")
+        gnewsStats?.let { stats ->
+            val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
+            val percentInt = (usagePercent * 100).toInt()
+            
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 8, 0, 8)
+            }
+            
+            val indicator = RateLimitIndicatorView(this).apply {
+                setUsagePercent(usagePercent)
+            }
+            container.addView(indicator)
+            
+            container.addView(View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(16, 1)
+            })
+            
+            container.addView(TextView(this).apply {
+                text = "GNews: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                textSize = 14f
+            })
+            
+            layout.addView(container)
+        }
+        
+        // OpenRouter (AI)
+        val openRouterStats = rateLimiter.getStats("openrouter_api")
+        openRouterStats?.let { stats ->
+            val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
+            val percentInt = (usagePercent * 100).toInt()
+            
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 8, 0, 8)
+            }
+            
+            val indicator = RateLimitIndicatorView(this).apply {
+                setUsagePercent(usagePercent)
+            }
+            container.addView(indicator)
+            
+            container.addView(View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(16, 1)
+            })
+            
+            container.addView(TextView(this).apply {
+                text = "AI API: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                textSize = 14f
+            })
+            
+            layout.addView(container)
+        }
+        
+        layout.addView(TextView(this).apply {
+            text = "🟢 Grün: < 70% | 🟡 Gelb: 70-99% | 🔴 Rot: Limit erreicht"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 16, 0, 0)
+        })
     }
     
     private fun saveSettings(

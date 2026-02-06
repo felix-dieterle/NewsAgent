@@ -16,6 +16,7 @@ import com.newsagent.models.NewsArticle
 import com.newsagent.services.*
 import com.newsagent.utils.ArticleDeduplicator
 import com.newsagent.utils.Logger
+import com.newsagent.utils.RateLimiter
 import com.newsagent.utils.SearchThrottler
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -182,6 +183,11 @@ class MainActivity : AppCompatActivity() {
         menu?.add(0, 2, 0, "Kostenlose Suche")
         menu?.add(0, 4, 0, "RSS Nachrichten")
         
+        // Add rate limit indicators menu item
+        val rateLimitItem = menu?.add(0, 5, 0, "API Limits")
+        rateLimitItem?.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        rateLimitItem?.actionView = createRateLimitIndicatorsView()
+        
         // Add search view
         val searchItem = menu?.add(0, 3, 0, "Suchen")
         searchItem?.setShowAsAction(MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW or MenuItem.SHOW_AS_ACTION_IF_ROOM)
@@ -233,7 +239,119 @@ class MainActivity : AppCompatActivity() {
                 loadRssNews()
                 true
             }
+            5 -> {
+                showRateLimitDetails()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+    
+    private fun createRateLimitIndicatorsView(): android.view.View {
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setPadding(8, 0, 8, 0)
+        }
+        
+        val rateLimiter = RateLimiter.getInstance()
+        
+        // NewsAPI indicator
+        val newsApiStats = rateLimiter.getStats("news_api")
+        val newsApiIndicator = RateLimitIndicatorView(this)
+        newsApiStats?.let {
+            val usagePercent = it.currentRequests.toFloat() / it.maxRequests.toFloat()
+            newsApiIndicator.setUsagePercent(usagePercent)
+        }
+        container.addView(newsApiIndicator)
+        
+        // Spacing
+        container.addView(android.view.View(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(8, 1)
+        })
+        
+        // GNews indicator
+        val gnewsStats = rateLimiter.getStats("gnews_api")
+        val gnewsIndicator = RateLimitIndicatorView(this)
+        gnewsStats?.let {
+            val usagePercent = it.currentRequests.toFloat() / it.maxRequests.toFloat()
+            gnewsIndicator.setUsagePercent(usagePercent)
+        }
+        container.addView(gnewsIndicator)
+        
+        // Spacing
+        container.addView(android.view.View(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(8, 1)
+        })
+        
+        // OpenRouter (AI) indicator
+        val openRouterStats = rateLimiter.getStats("openrouter_api")
+        val openRouterIndicator = RateLimitIndicatorView(this)
+        openRouterStats?.let {
+            val usagePercent = it.currentRequests.toFloat() / it.maxRequests.toFloat()
+            openRouterIndicator.setUsagePercent(usagePercent)
+        }
+        container.addView(openRouterIndicator)
+        
+        container.setOnClickListener {
+            showRateLimitDetails()
+        }
+        
+        return container
+    }
+    
+    private fun showRateLimitDetails() {
+        val rateLimiter = RateLimiter.getInstance()
+        
+        val newsApiStats = rateLimiter.getStats("news_api")
+        val gnewsStats = rateLimiter.getStats("gnews_api")
+        val openRouterStats = rateLimiter.getStats("openrouter_api")
+        
+        val message = buildString {
+            appendLine("API Rate Limits:")
+            appendLine()
+            
+            newsApiStats?.let {
+                val percent = (it.currentRequests.toFloat() / it.maxRequests * 100).toInt()
+                appendLine("📰 NewsAPI: ${it.remainingRequests}/${it.maxRequests} remaining ($percent% used)")
+                if (it.timeUntilReset > 0) {
+                    appendLine("   Reset in: ${formatTimeRemaining(it.timeUntilReset)}")
+                }
+                appendLine()
+            }
+            
+            gnewsStats?.let {
+                val percent = (it.currentRequests.toFloat() / it.maxRequests * 100).toInt()
+                appendLine("📰 GNews: ${it.remainingRequests}/${it.maxRequests} remaining ($percent% used)")
+                if (it.timeUntilReset > 0) {
+                    appendLine("   Reset in: ${formatTimeRemaining(it.timeUntilReset)}")
+                }
+                appendLine()
+            }
+            
+            openRouterStats?.let {
+                val percent = (it.currentRequests.toFloat() / it.maxRequests * 100).toInt()
+                appendLine("🤖 AI (OpenRouter): ${it.remainingRequests}/${it.maxRequests} remaining ($percent% used)")
+                if (it.timeUntilReset > 0) {
+                    appendLine("   Reset in: ${formatTimeRemaining(it.timeUntilReset)}")
+                }
+            }
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("API Rate Limits")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
+    }
+    
+    private fun formatTimeRemaining(millis: Long): String {
+        val hours = millis / (1000 * 60 * 60)
+        val minutes = (millis % (1000 * 60 * 60)) / (1000 * 60)
+        
+        return when {
+            hours > 0 -> "${hours}h ${minutes}m"
+            minutes > 0 -> "${minutes}m"
+            else -> "< 1m"
         }
     }
     
