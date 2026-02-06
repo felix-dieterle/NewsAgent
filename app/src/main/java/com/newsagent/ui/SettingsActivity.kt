@@ -134,6 +134,21 @@ class SettingsActivity : AppCompatActivity() {
         }
         layout.addView(credibilityCheckbox)
         
+        // AI Mode Toggle
+        val aiModeCheckbox = CheckBox(this).apply {
+            text = "AI-Modus (bevorzugt Qualität über Kosten)"
+            isChecked = prefs.getBoolean("ai_mode_enabled", false)
+            setPadding(0, 8, 0, 0)
+        }
+        layout.addView(aiModeCheckbox)
+        
+        layout.addView(TextView(this).apply {
+            text = "Im AI-Modus werden kostenpflichtige APIs für bessere Ergebnisse priorisiert. Im Standard-Modus werden kostenlose RSS-Feeds bevorzugt."
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 0)
+        })
+        
         // Max Articles
         layout.addView(TextView(this).apply {
             text = "Maximale Artikel pro Update"
@@ -212,6 +227,7 @@ class SettingsActivity : AppCompatActivity() {
                     notificationsCheckbox.isChecked,
                     autoSummaryCheckbox.isChecked,
                     credibilityCheckbox.isChecked,
+                    aiModeCheckbox.isChecked,
                     maxArticlesInput.text.toString().toIntOrNull() ?: 10
                 )
             }
@@ -231,6 +247,7 @@ class SettingsActivity : AppCompatActivity() {
         enableNotifications: Boolean,
         enableAutoSummary: Boolean,
         enableCredibilityCheck: Boolean,
+        aiModeEnabled: Boolean,
         maxArticles: Int
     ) {
         Logger.d("SettingsActivity", "Saving settings...")
@@ -260,6 +277,7 @@ class SettingsActivity : AppCompatActivity() {
             putBoolean("enable_notifications", enableNotifications)
             putBoolean("enable_auto_summary", enableAutoSummary)
             putBoolean("enable_credibility_check", enableCredibilityCheck)
+            putBoolean("ai_mode_enabled", aiModeEnabled)
             putInt("max_articles", maxArticles)
             apply()
         }

@@ -41,14 +41,18 @@ class SearchStrategySelector(private val context: Context) {
      * Execute an intelligent search that automatically selects the best source
      * 
      * @param query The search query
-     * @param preferFree If true, strongly prefer free sources over paid APIs
+     * @param preferFree If true, strongly prefer free sources over paid APIs (overridden by AI mode setting)
      * @return SearchResult containing articles and metadata
      */
     suspend fun smartSearch(query: String, preferFree: Boolean = true): SearchResult = withContext(Dispatchers.IO) {
-        Logger.i("SearchStrategySelector", "Smart search for: '$query' (preferFree=$preferFree)")
+        // Check if AI mode is enabled (overrides preferFree parameter)
+        val aiModeEnabled = prefs.getBoolean("ai_mode_enabled", false)
+        val actualPreferFree = if (aiModeEnabled) false else preferFree
         
-        // Strategy 1: Try RSS feeds first if preferFree (completely free, unlimited)
-        if (preferFree) {
+        Logger.i("SearchStrategySelector", "Smart search for: '$query' (AI mode=$aiModeEnabled, preferFree=$actualPreferFree)")
+        
+        // Strategy 1: Try RSS feeds first if preferFree and not in AI mode (completely free, unlimited)
+        if (actualPreferFree) {
             Logger.d("SearchStrategySelector", "Trying RSS feeds (free, unlimited)...")
             val rssResults = try {
                 newsRepository.searchRssNews(query)
@@ -118,8 +122,8 @@ class SearchStrategySelector(private val context: Context) {
             Logger.d("SearchStrategySelector", "NewsAPI key not configured")
         }
         
-        // Strategy 4: If preferFree was false, try RSS as fallback now
-        if (!preferFree) {
+        // Strategy 4: If preferFree was false (or AI mode), try RSS as fallback now
+        if (!actualPreferFree) {
             Logger.d("SearchStrategySelector", "Falling back to RSS feeds...")
             val rssResults = try {
                 newsRepository.searchRssNews(query)

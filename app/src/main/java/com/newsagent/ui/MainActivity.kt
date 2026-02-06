@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.newsagent.models.NewsArticle
 import com.newsagent.services.*
+import com.newsagent.utils.ArticleDeduplicator
 import com.newsagent.utils.Logger
+import com.newsagent.utils.SearchThrottler
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
@@ -30,7 +32,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var newsRepository: NewsRepository
     private lateinit var aiSummaryService: AiSummaryService
     private lateinit var credibilityService: CredibilityCheckService
+    private lateinit var searchStrategySelector: SearchStrategySelector
     
+    private val searchThrottler = SearchThrottler.getInstance()
     private val articles = mutableListOf<NewsArticle>()
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,6 +48,7 @@ class MainActivity : AppCompatActivity() {
             newsRepository = NewsRepository(this)
             aiSummaryService = AiSummaryService(this)
             credibilityService = CredibilityCheckService(this)
+            searchStrategySelector = SearchStrategySelector(this)
             Logger.d("MainActivity", "Services initialized successfully")
             
             // Setup UI
@@ -120,16 +125,16 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                // Process articles with parallel execution
-                processArticles(newArticles)
+                // Process articles with parallel execution and deduplication
+                val processedArticles = processArticles(newArticles)
                 
                 articles.clear()
-                articles.addAll(newArticles)
+                articles.addAll(processedArticles)
                 adapter.notifyDataSetChanged()
                 
                 Toast.makeText(
                     this@MainActivity,
-                    "${newArticles.size} Artikel geladen",
+                    "${processedArticles.size} Artikel geladen",
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
@@ -188,13 +193,26 @@ class MainActivity : AppCompatActivity() {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 if (!query.isNullOrBlank()) {
-                    performRssSearch(query)
+                    // Use smart search instead of direct RSS search
+                    performSmartSearch(query)
                 }
                 return true
             }
             
             override fun onQueryTextChange(newText: String?): Boolean {
-                return false
+                // Throttled search as user types
+                if (!newText.isNullOrBlank() && newText.length >= SearchThrottler.MIN_QUERY_LENGTH) {
+                    lifecycleScope.launch {
+                        searchThrottler.executeSearch(
+                            searchId = "main_search",
+                            query = newText,
+                            searchAction = { query ->
+                                performSmartSearch(query)
+                            }
+                        )
+                    }
+                }
+                return true
             }
         })
         
@@ -241,14 +259,28 @@ class MainActivity : AppCompatActivity() {
     /**
      * Helper method to process articles with summaries and credibility checks
      * Uses parallel processing with concurrency limit for better performance
+     * Respects AI mode settings for optimal resource usage
      */
-    private suspend fun processArticles(articlesList: List<NewsArticle>) {
+    private suspend fun processArticles(articlesList: List<NewsArticle>): List<NewsArticle> {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val enableSummary = prefs.getBoolean("enable_auto_summary", true)
         val enableCredibility = prefs.getBoolean("enable_credibility_check", true)
+        val aiModeEnabled = prefs.getBoolean("ai_mode_enabled", false)
         
-        // Limit concurrency to avoid overwhelming the device (max 5 concurrent)
-        val chunkedArticles = articlesList.chunked(5)
+        // Deduplicate articles to avoid redundant processing
+        val deduplicated = ArticleDeduplicator.deduplicateByUrl(articlesList)
+        val stats = ArticleDeduplicator.getDeduplicationStats(articlesList, deduplicated)
+        if (stats.duplicatesRemoved > 0) {
+            Logger.i("MainActivity", "Deduplication: Removed ${stats.duplicatesRemoved} duplicates (${stats.reductionPercentage}% reduction)")
+        }
+        
+        // Adjust concurrency based on AI mode
+        // AI mode: more aggressive processing (up to 5 concurrent)
+        // Non-AI mode: conservative processing (up to 3 concurrent)
+        val concurrencyLimit = if (aiModeEnabled) 5 else 3
+        val chunkedArticles = deduplicated.chunked(concurrencyLimit)
+        
+        Logger.i("MainActivity", "Processing ${deduplicated.size} articles (AI mode=$aiModeEnabled, concurrency=$concurrencyLimit)")
         
         for (chunk in chunkedArticles) {
             chunk.map { article ->
@@ -263,6 +295,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }.forEach { it.await() }
         }
+        
+        return deduplicated
     }
     
     private fun performFreeSearch(query: String) {
@@ -289,16 +323,16 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                // Process articles
-                processArticles(newArticles)
+                // Process articles with deduplication
+                val processedArticles = processArticles(newArticles)
                 
                 articles.clear()
-                articles.addAll(newArticles)
+                articles.addAll(processedArticles)
                 adapter.notifyDataSetChanged()
                 
                 Toast.makeText(
                     this@MainActivity,
-                    "${newArticles.size} Artikel gefunden",
+                    "${processedArticles.size} Artikel gefunden",
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
@@ -336,16 +370,16 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                // Process articles
-                processArticles(newArticles)
+                // Process articles with deduplication
+                val processedArticles = processArticles(newArticles)
                 
                 articles.clear()
-                articles.addAll(newArticles)
+                articles.addAll(processedArticles)
                 adapter.notifyDataSetChanged()
                 
                 Toast.makeText(
                     this@MainActivity,
-                    "${newArticles.size} kostenlose Artikel geladen",
+                    "${processedArticles.size} kostenlose Artikel geladen",
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
@@ -384,16 +418,16 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                // Process articles
-                processArticles(newArticles)
+                // Process articles with deduplication
+                val processedArticles = processArticles(newArticles)
                 
                 articles.clear()
-                articles.addAll(newArticles)
+                articles.addAll(processedArticles)
                 adapter.notifyDataSetChanged()
                 
                 Toast.makeText(
                     this@MainActivity,
-                    "${newArticles.size} RSS-Artikel geladen",
+                    "${processedArticles.size} RSS-Artikel geladen",
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
@@ -432,16 +466,16 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                // Process articles
-                processArticles(newArticles)
+                // Process articles with deduplication
+                val processedArticles = processArticles(newArticles)
                 
                 articles.clear()
-                articles.addAll(newArticles)
+                articles.addAll(processedArticles)
                 adapter.notifyDataSetChanged()
                 
                 Toast.makeText(
                     this@MainActivity,
-                    "${newArticles.size} Artikel gefunden",
+                    "${processedArticles.size} Artikel gefunden",
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
@@ -450,6 +484,66 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(
                     this@MainActivity,
                     "Fehler bei der RSS-Suche: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
+    /**
+     * Perform intelligent search using SearchStrategySelector
+     * Automatically chooses the best source based on availability and rate limits
+     */
+    private fun performSmartSearch(query: String) {
+        lifecycleScope.launch {
+            try {
+                Logger.d("MainActivity", "Performing smart search for: $query")
+                
+                Toast.makeText(
+                    this@MainActivity,
+                    "Intelligente Suche nach '$query'...",
+                    Toast.LENGTH_SHORT
+                ).show()
+                
+                val result = searchStrategySelector.smartSearch(query)
+                Logger.i("MainActivity", "Smart search returned ${result.articles.size} articles from ${result.source}")
+                
+                if (result.articles.isEmpty()) {
+                    Logger.w("MainActivity", "No articles found for query: $query")
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Keine Artikel für '$query' gefunden.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
+                
+                // Process articles with deduplication
+                val processedArticles = processArticles(result.articles)
+                
+                articles.clear()
+                articles.addAll(processedArticles)
+                adapter.notifyDataSetChanged()
+                
+                // Show source in toast
+                val sourceName = when (result.source) {
+                    SearchStrategySelector.SearchSource.RSS -> "RSS"
+                    SearchStrategySelector.SearchSource.GNEWS -> "GNews"
+                    SearchStrategySelector.SearchSource.NEWSAPI -> "NewsAPI"
+                    SearchStrategySelector.SearchSource.CACHE -> "Cache"
+                }
+                
+                Toast.makeText(
+                    this@MainActivity,
+                    "${processedArticles.size} Artikel gefunden (Quelle: $sourceName)",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Logger.e("MainActivity", "Error in smart search", e)
+                e.printStackTrace()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Fehler bei der Suche: ${e.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }
