@@ -648,6 +648,7 @@ class MainActivity : AppCompatActivity() {
                     SearchStrategySelector.SearchSource.RSS -> "RSS"
                     SearchStrategySelector.SearchSource.GNEWS -> "GNews"
                     SearchStrategySelector.SearchSource.NEWSAPI -> "NewsAPI"
+                    SearchStrategySelector.SearchSource.GOOGLE_CUSTOM -> "Google Search"
                     SearchStrategySelector.SearchSource.CACHE -> "Cache"
                 }
                 
