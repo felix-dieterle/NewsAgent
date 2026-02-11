@@ -37,7 +37,7 @@ interface GoogleCustomSearchApi {
  */
 data class GoogleSearchResponse(
     @SerializedName("kind")
-    val kind: String,
+    val kind: String?,
     
     @SerializedName("items")
     val items: List<GoogleSearchItem>?
