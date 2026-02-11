@@ -97,6 +97,46 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(0, 4, 0, 16)
         })
         
+        // Google Custom Search API Key
+        layout.addView(TextView(this).apply {
+            text = "Google Custom Search API Key"
+            textSize = 18f
+            setPadding(0, 16, 0, 8)
+        })
+        
+        val googleApiKeyInput = EditText(this).apply {
+            hint = "Geben Sie Ihren Google API Key ein"
+            setText(prefs.getString("google_api_key", ""))
+        }
+        layout.addView(googleApiKeyInput)
+        
+        layout.addView(TextView(this).apply {
+            text = "Google Cloud Console API Key - https://console.cloud.google.com/apis/credentials"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 8)
+        })
+        
+        // Google Custom Search Engine ID
+        layout.addView(TextView(this).apply {
+            text = "Google Custom Search Engine ID"
+            textSize = 18f
+            setPadding(0, 8, 0, 8)
+        })
+        
+        val googleSearchEngineIdInput = EditText(this).apply {
+            hint = "Geben Sie Ihre Search Engine ID (cx) ein"
+            setText(prefs.getString("google_search_engine_id", ""))
+        }
+        layout.addView(googleSearchEngineIdInput)
+        
+        layout.addView(TextView(this).apply {
+            text = "Programmable Search Engine ID - https://programmablesearchengine.google.com/"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 16)
+        })
+        
         // Update Interval
         layout.addView(TextView(this).apply {
             text = "Update-Intervall (Minuten)"
@@ -244,6 +284,8 @@ class SettingsActivity : AppCompatActivity() {
                 saveSettings(
                     newsApiTokenInput.text.toString(),
                     aiApiTokenInput.text.toString(),
+                    googleApiKeyInput.text.toString(),
+                    googleSearchEngineIdInput.text.toString(),
                     selectedSource,
                     intervalInput.text.toString().toIntOrNull() ?: 60,
                     notificationsCheckbox.isChecked,
@@ -348,6 +390,34 @@ class SettingsActivity : AppCompatActivity() {
             layout.addView(container)
         }
         
+        // Google Custom Search
+        val googleStats = rateLimiter.getStats("google_custom_search")
+        googleStats?.let { stats ->
+            val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
+            val percentInt = (usagePercent * 100).toInt()
+            
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 8, 0, 8)
+            }
+            
+            val indicator = RateLimitIndicatorView(this).apply {
+                setUsagePercent(usagePercent)
+            }
+            container.addView(indicator)
+            
+            container.addView(View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(16, 1)
+            })
+            
+            container.addView(TextView(this).apply {
+                text = "Google Search: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                textSize = 14f
+            })
+            
+            layout.addView(container)
+        }
+        
         layout.addView(TextView(this).apply {
             text = "🟢 Grün: < 70% | 🟡 Gelb: 70-99% | 🔴 Rot: Limit erreicht"
             textSize = 12f
@@ -359,6 +429,8 @@ class SettingsActivity : AppCompatActivity() {
     private fun saveSettings(
         newsApiToken: String,
         aiApiToken: String,
+        googleApiKey: String,
+        googleSearchEngineId: String,
         newsSource: String,
         intervalMinutes: Int,
         enableNotifications: Boolean,
@@ -390,6 +462,8 @@ class SettingsActivity : AppCompatActivity() {
             }
             
             putString("openrouter_api_key", aiApiToken)
+            putString("google_api_key", googleApiKey)
+            putString("google_search_engine_id", googleSearchEngineId)
             putInt("update_interval_minutes", intervalMinutes)
             putBoolean("enable_notifications", enableNotifications)
             putBoolean("enable_auto_summary", enableAutoSummary)

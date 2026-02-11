@@ -31,6 +31,7 @@ class RateLimiter private constructor() {
         const val NEWS_API_DAILY_LIMIT = 95 // Leave 5 requests buffer
         const val GNEWS_API_DAILY_LIMIT = 95
         const val OPENROUTER_HOURLY_LIMIT = 50 // Conservative limit for free tier
+        const val GOOGLE_CUSTOM_SEARCH_DAILY_LIMIT = 95 // 100 queries per day, keep 5 buffer
     }
     
     init {
@@ -38,6 +39,7 @@ class RateLimiter private constructor() {
         setLimit("news_api", NEWS_API_DAILY_LIMIT, TimeUnit.DAYS.toMillis(1))
         setLimit("gnews_api", GNEWS_API_DAILY_LIMIT, TimeUnit.DAYS.toMillis(1))
         setLimit("openrouter_api", OPENROUTER_HOURLY_LIMIT, TimeUnit.HOURS.toMillis(1))
+        setLimit("google_custom_search", GOOGLE_CUSTOM_SEARCH_DAILY_LIMIT, TimeUnit.DAYS.toMillis(1))
     }
     
     /**
