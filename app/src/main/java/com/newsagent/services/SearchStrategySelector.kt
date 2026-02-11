@@ -25,10 +25,11 @@ class SearchStrategySelector(private val context: Context) {
     private val rateLimiter = RateLimiter.getInstance()
     
     enum class SearchSource {
-        CACHE,      // Cached results
-        RSS,        // Free RSS feeds
-        GNEWS,      // GNews API (free tier)
-        NEWSAPI     // NewsAPI (free tier)
+        CACHE,              // Cached results
+        RSS,                // Free RSS feeds
+        GNEWS,              // GNews API (free tier)
+        NEWSAPI,            // NewsAPI (free tier)
+        GOOGLE_CUSTOM       // Google Custom Search API (free tier)
     }
     
     data class SearchResult(
@@ -122,7 +123,35 @@ class SearchStrategySelector(private val context: Context) {
             Logger.d("SearchStrategySelector", "NewsAPI key not configured")
         }
         
-        // Strategy 4: If preferFree was false (or AI mode), try RSS as fallback now
+        // Strategy 4: Try Google Custom Search API if available and within rate limit
+        val googleApiKey = prefs.getString("google_api_key", "") ?: ""
+        val googleSearchEngineId = prefs.getString("google_search_engine_id", "") ?: ""
+        if (googleApiKey.isNotEmpty() && googleSearchEngineId.isNotEmpty()) {
+            val googleRemaining = rateLimiter.getRemainingRequests("google_custom_search")
+            Logger.d("SearchStrategySelector", "Google Custom Search API available (${googleRemaining} requests remaining)")
+            
+            if (googleRemaining > 5) { // Keep 5 request buffer
+                Logger.d("SearchStrategySelector", "Trying Google Custom Search API...")
+                val googleResults = try {
+                    newsRepository.searchGoogleCustomSearch(query)
+                } catch (e: Exception) {
+                    Logger.e("SearchStrategySelector", "Google Custom Search failed", e)
+                    emptyList()
+                }
+                
+                if (googleResults.isNotEmpty()) {
+                    Logger.i("SearchStrategySelector", "✓ Google Custom Search successful: ${googleResults.size} articles")
+                    return@withContext SearchResult(googleResults, SearchSource.GOOGLE_CUSTOM, false)
+                }
+                Logger.d("SearchStrategySelector", "✗ Google Custom Search returned no results")
+            } else {
+                Logger.w("SearchStrategySelector", "✗ Google Custom Search rate limit low (${googleRemaining} remaining), skipping")
+            }
+        } else {
+            Logger.d("SearchStrategySelector", "Google Custom Search API not fully configured")
+        }
+        
+        // Strategy 5: If preferFree was false (or AI mode), try RSS as fallback now
         if (!actualPreferFree) {
             Logger.d("SearchStrategySelector", "Falling back to RSS feeds...")
             val rssResults = try {

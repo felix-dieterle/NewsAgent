@@ -75,6 +75,26 @@ class NewsRepository(private val context: Context) {
             .create(FreeNewsApi::class.java)
     }
     
+    private val googleCustomSearchApi: GoogleCustomSearchApi by lazy {
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        }
+        
+        val client = OkHttpClient.Builder()
+            .cache(httpCache)
+            .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+        
+        Retrofit.Builder()
+            .baseUrl("https://www.googleapis.com/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(GoogleCustomSearchApi::class.java)
+    }
+    
     /**
      * Fetch top headlines with caching - routes to appropriate source based on settings
      */
@@ -504,6 +524,95 @@ class NewsRepository(private val context: Context) {
             source = article.source,
             publishedAt = article.pubDate ?: "",
             imageUrl = null,
+            author = null
+        )
+    }
+    
+    /**
+     * Search for news using Google Custom Search API
+     * Requires:
+     * - google_api_key in SharedPreferences
+     * - google_search_engine_id in SharedPreferences
+     * 
+     * Free tier: 100 queries per day
+     */
+    suspend fun searchGoogleCustomSearch(query: String): List<NewsArticle> = withContext(Dispatchers.IO) {
+        try {
+            val apiKey = prefs.getString("google_api_key", "") ?: ""
+            val searchEngineId = prefs.getString("google_search_engine_id", "") ?: ""
+            
+            if (apiKey.isEmpty() || searchEngineId.isEmpty()) {
+                Logger.w("NewsRepository", "Google Custom Search API key or Search Engine ID not configured")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
+            val maxArticles = prefs.getInt("max_articles", 10)
+            
+            // Check cache first
+            val cacheKey = "google_search_${query}_${maxArticles}"
+            cacheManager.getCachedArticles(cacheKey)?.let { cached ->
+                Logger.d("NewsRepository", "Returning ${cached.size} cached Google Custom Search results")
+                return@withContext cached
+            }
+            
+            // Check rate limit
+            if (!rateLimiter.allowRequest("google_custom_search")) {
+                val remaining = rateLimiter.getRemainingRequests("google_custom_search")
+                Logger.w("NewsRepository", "Google Custom Search rate limit reached. Remaining requests: $remaining")
+                return@withContext emptyList<NewsArticle>()
+            }
+            
+            Logger.i("NewsRepository", "Querying Google Custom Search: query='$query', maxResults=$maxArticles")
+            
+            val response = googleCustomSearchApi.search(
+                query = query,
+                apiKey = apiKey,
+                cx = searchEngineId,
+                num = maxArticles
+            )
+            
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items ?: emptyList()
+                val articles = items.map { convertFromGoogleSearchItem(it) }
+                Logger.i("NewsRepository", "Successfully fetched ${articles.size} articles from Google Custom Search")
+                
+                // Cache the results
+                cacheManager.cacheArticles(cacheKey, articles)
+                
+                articles
+            } else {
+                Logger.e("NewsRepository", "Google Custom Search request failed: ${response.code()} - ${response.message()}")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            Logger.e("NewsRepository", "Exception in Google Custom Search", e)
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+    
+    private fun convertFromGoogleSearchItem(item: GoogleSearchItem): NewsArticle {
+        // Extract image URL from pagemap if available
+        val imageUrl = item.pagemap?.cseImage?.firstOrNull()?.src
+        
+        // Try to extract published date from metatags
+        val publishedAt = item.pagemap?.metatags?.firstOrNull()?.get("article:published_time")
+            ?: item.pagemap?.metatags?.firstOrNull()?.get("datePublished")
+            ?: ""
+        
+        // Extract source from metatags or URL
+        val source = item.pagemap?.metatags?.firstOrNull()?.get("og:site_name")
+            ?: item.link.substringAfter("://").substringBefore("/")
+        
+        return NewsArticle(
+            id = UUID.randomUUID().toString(),
+            title = item.title,
+            description = item.snippet,
+            content = null,
+            url = item.link,
+            source = source,
+            publishedAt = publishedAt,
+            imageUrl = imageUrl,
             author = null
         )
     }
