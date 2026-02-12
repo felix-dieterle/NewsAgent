@@ -67,6 +67,13 @@ Die App prüft maximal einmal alle 20 Minuten auf Updates. Dies verhindert:
 - Unnötige API-Aufrufe
 - Nervige Update-Dialoge bei jedem App-Start
 
+**Neu (v1.1+)**: Wenn die Update-Prüfung übersprungen wird (weil noch keine 20 Minuten vergangen sind), zeigt die App eine Toast-Nachricht an:
+```
+"Update-Prüfung übersprungen. Nächste Prüfung in X Minuten."
+```
+
+Dies gibt dem Benutzer Feedback, dass die App funktioniert und wann die nächste Prüfung stattfindet.
+
 ## Technische Details
 
 ### Verwendete Komponenten

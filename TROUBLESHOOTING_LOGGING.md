@@ -57,6 +57,26 @@ Die Logs zeigen:
 2. Tippe auf **"Logs löschen"**
 3. Alte Logs werden entfernt (spart Speicherplatz)
 
+### Quelle testen (Neu! 🎉)
+
+**Problem**: Du erhältst immer 0 Artikel?
+
+1. Öffne **Einstellungen**
+2. Tippe auf **"Quelle testen (alle Artikel anzeigen)"**
+3. Die App lädt alle verfügbaren Artikel von deiner aktuellen Quelle
+4. Du siehst:
+   - ✅ Erfolg: Liste aller gefundenen Artikel
+   - ⚠️ Warnung: Keine Artikel mit möglichen Ursachen
+   - ❌ Fehler: Detaillierte Fehlermeldung
+
+**Mögliche Ursachen für 0 Artikel:**
+- **API-Schlüssel fehlt oder ungültig**: Überprüfe deine Einstellungen
+- **Rate Limit erreicht**: Warte oder wechsle zu RSS Feeds
+- **Netzwerkverbindung fehlt**: Prüfe deine Internetverbindung
+- **RSS-Feeds nicht verfügbar**: Temporäre Server-Probleme
+
+Diese Funktion hilft dir zu verstehen, ob deine Quelle funktioniert und warum du möglicherweise keine Ergebnisse erhältst.
+
 ## Häufige Installationsprobleme & Lösungen
 
 ### 1. "App kann nicht installiert werden" - Allgemein
@@ -130,8 +150,20 @@ Die App verwendet folgende Log-Levels:
 |-------|------------|----------|
 | **DEBUG** | Detaillierte Ablauf-Informationen | "Fetching headlines...", "Setting up UI..." |
 | **INFO** | Wichtige Ereignisse | "Logger initialized", "App started successfully" |
-| **WARN** | Warnungen, nicht-kritische Probleme | "No articles fetched - possibly missing API key" |
-| **ERROR** | Fehler mit Stack-Traces | "Exception fetching headlines", "Fatal error in onCreate" |
+| **WARN** | Warnungen, nicht-kritische Probleme | "⚠️ No articles fetched - possibly missing API key" |
+| **ERROR** | Fehler mit Stack-Traces | "❌ Exception fetching headlines", "Fatal error in onCreate" |
+
+### Neue Emoji-Indikatoren (v1.1+)
+
+Die neueste Version verwendet Emojis für bessere Lesbarkeit:
+
+| Emoji | Bedeutung | Beispiel |
+|-------|-----------|----------|
+| ✅ | Erfolgreich | "✅ Successfully fetched 10 headlines" |
+| ❌ | Fehler | "❌ API request failed: 401 - Unauthorized" |
+| ⚠️ | Warnung | "⚠️ Rate limit reached. Remaining requests: 0" |
+| 📰 | RSS Feed | "📰 Querying RSS feeds (100% kostenlos)" |
+| ➡️ | Hinweis/Tipp | "➡️ Bitte API-Schlüssel in den Einstellungen konfigurieren" |
 
 ### Log-Beispiel
 
