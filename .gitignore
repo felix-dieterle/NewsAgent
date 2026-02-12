@@ -30,6 +30,7 @@ local.properties
 bin/
 gen/
 out/
+META-INF/
 
 # Gradle files
 .gradle/
