@@ -789,51 +789,45 @@ class MainActivity : AppCompatActivity() {
      * Register receiver to handle download completion
      */
     private fun registerDownloadReceiver(downloadId: Long) {
-        val receiver = android.content.BroadcastReceiver()
-        
-        val onReceive = fun(_: android.content.Context, intent: android.content.Intent) {
-            val id = intent.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-            if (id == downloadId) {
-                Logger.i("MainActivity", "Download completed")
-                
-                // Get the downloaded file
-                val downloadManager = getSystemService(DOWNLOAD_SERVICE) as android.app.DownloadManager
-                val query = android.app.DownloadManager.Query().setFilterById(downloadId)
-                val cursor = downloadManager.query(query)
-                
-                if (cursor.moveToFirst()) {
-                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_STATUS))
-                    
-                    if (status == android.app.DownloadManager.STATUS_SUCCESSFUL) {
-                        val uriString = cursor.getString(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_LOCAL_URI))
-                        val apkFile = java.io.File(android.net.Uri.parse(uriString).path!!)
-                        
-                        // Install the APK
-                        updateService.installApk(apkFile)
-                    } else {
-                        Logger.e("MainActivity", "Download failed with status: $status")
-                        Toast.makeText(
-                            this,
-                            "Update-Download fehlgeschlagen",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-                cursor.close()
-                
-                // Unregister receiver
-                try {
-                    unregisterReceiver(this)
-                } catch (e: Exception) {
-                    Logger.w("MainActivity", "Error unregistering receiver", e)
-                }
-            }
-        }
-        
         // Create a proper BroadcastReceiver object
         val broadcastReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
-                onReceive(context, intent)
+                val id = intent.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (id == downloadId) {
+                    Logger.i("MainActivity", "Download completed")
+                    
+                    // Get the downloaded file
+                    val downloadManager = getSystemService(DOWNLOAD_SERVICE) as android.app.DownloadManager
+                    val query = android.app.DownloadManager.Query().setFilterById(downloadId)
+                    val cursor = downloadManager.query(query)
+                    
+                    if (cursor.moveToFirst()) {
+                        val status = cursor.getInt(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_STATUS))
+                        
+                        if (status == android.app.DownloadManager.STATUS_SUCCESSFUL) {
+                            val uriString = cursor.getString(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_LOCAL_URI))
+                            val apkFile = java.io.File(android.net.Uri.parse(uriString).path!!)
+                            
+                            // Install the APK
+                            updateService.installApk(apkFile)
+                        } else {
+                            Logger.e("MainActivity", "Download failed with status: $status")
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Update-Download fehlgeschlagen",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                    cursor.close()
+                    
+                    // Unregister receiver
+                    try {
+                        unregisterReceiver(this)
+                    } catch (e: Exception) {
+                        Logger.w("MainActivity", "Error unregistering receiver", e)
+                    }
+                }
             }
         }
         

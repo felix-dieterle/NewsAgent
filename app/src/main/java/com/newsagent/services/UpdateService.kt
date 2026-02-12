@@ -160,6 +160,15 @@ class UpdateService(private val context: Context) {
     fun downloadAndInstallUpdate(downloadUrl: String): Long {
         Logger.i("UpdateService", "Downloading update from: $downloadUrl")
         
+        // Security check: Ensure download is from HTTPS and GitHub
+        if (!downloadUrl.startsWith("https://")) {
+            throw SecurityException("Update download must use HTTPS")
+        }
+        
+        if (!downloadUrl.contains("github.com") && !downloadUrl.contains("githubusercontent.com")) {
+            throw SecurityException("Update download must be from GitHub")
+        }
+        
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
