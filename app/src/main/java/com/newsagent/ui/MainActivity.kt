@@ -443,7 +443,7 @@ class MainActivity : AppCompatActivity() {
                 appendLine("  Bevorzugt kostenlose RSS-Feeds")
                 appendLine("  Ideal für täglichen Gebrauch")
                 appendLine()
-                appendLine("• AI-Modus")
+                appendLine("• KI-Modus")
                 appendLine("  Nutzt kostenpflichtige APIs")
                 appendLine("  Bessere Qualität & mehr Features")
                 appendLine()
