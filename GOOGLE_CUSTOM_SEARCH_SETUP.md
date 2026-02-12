@@ -2,6 +2,24 @@
 
 This guide explains how to set up and configure Google Custom Search API as a fallback search option in NewsAgent.
 
+## Important: Google Custom Search API vs SerpApi
+
+NewsAgent currently uses **Google Custom Search API**, which requires:
+1. **API Key** - From Google Cloud Console
+2. **Search Engine ID (cx parameter)** - From Programmable Search Engine
+
+### Why Two Parameters?
+Google's official Custom Search API is designed this way - you need both credentials. The Search Engine ID defines which custom search engine configuration to use (what sites to search, search settings, etc.).
+
+### Alternative: SerpApi
+If you prefer a simpler setup with just one API key, consider using **SerpApi** (https://serpapi.com/):
+- Only requires ONE API key
+- No Search Engine ID needed
+- Different pricing model
+- Not currently integrated in NewsAgent
+
+**Note**: To switch to SerpApi would require code changes. For now, this guide covers the Google Custom Search API setup.
+
 ## Overview
 
 Google Custom Search API has been integrated as a fallback search mechanism in the intelligent search strategy. It provides:
@@ -54,6 +72,31 @@ Google Custom Search API has been integrated as a fallback search mechanism in t
    - **Google Custom Search API Key**: Paste the API key from step 3
    - **Google Custom Search Engine ID**: Paste the search engine ID from step 4
 5. Click **Save Settings**
+
+### 6. Test Your Configuration (NEW!)
+
+After saving your settings, you can verify that everything is working:
+
+1. In **Settings**, scroll to the **Troubleshooting** section
+2. Click **"Alle APIs testen"** (Test All APIs)
+3. Wait for the test to complete
+4. Review the results:
+   - ✅ = API is working correctly
+   - ❌ = API test failed (check your credentials)
+   - ⚠️ = Partial configuration or no results
+   - ⚪ = Not configured
+
+This test will verify:
+- Your Google Custom Search API key is valid
+- Your Search Engine ID is correct
+- Both parameters work together correctly
+- The API returns results
+
+If the test fails, check:
+- Both fields are filled in (API key AND Search Engine ID)
+- No extra spaces in the values
+- Custom Search API is enabled in Google Cloud Console
+- Your Search Engine is configured to search the entire web
 
 ## How It Works
 
