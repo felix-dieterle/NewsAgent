@@ -9,7 +9,7 @@ Die NewsAgent Android-App verfügt über eine automatische Update-Funktion, die 
 ### 1. Update-Prüfung beim Start
 
 - Die App prüft beim Start automatisch auf neue Versionen
-- Die Prüfung erfolgt maximal einmal alle 24 Stunden
+- Die Prüfung erfolgt maximal einmal alle 20 Minuten
 - Updates werden von der offiziellen GitHub Releases Seite geladen
 
 ### 2. GitHub Integration
@@ -63,7 +63,7 @@ Standard: **Aktiviert**
 
 ### Update-Intervall
 
-Die App prüft maximal einmal alle 24 Stunden auf Updates. Dies verhindert:
+Die App prüft maximal einmal alle 20 Minuten auf Updates. Dies verhindert:
 - Unnötige API-Aufrufe
 - Nervige Update-Dialoge bei jedem App-Start
 
@@ -151,7 +151,7 @@ Logs können in den App-Einstellungen angezeigt werden:
 1. Keine Internetverbindung
 2. GitHub API ist nicht erreichbar
 3. Auto-Update ist in den Einstellungen deaktiviert
-4. Letzte Prüfung war vor weniger als 24 Stunden
+4. Letzte Prüfung war vor weniger als 20 Minuten
 
 **Lösung:**
 - App-Logs in den Einstellungen überprüfen

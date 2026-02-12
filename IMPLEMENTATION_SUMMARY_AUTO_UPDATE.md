@@ -20,7 +20,7 @@ Successfully implemented a comprehensive auto-update feature for the NewsAgent A
 
 ### 1. Automatic Update Checking
 - Checks for updates on every app startup
-- Rate limited to once per 24 hours
+- Rate limited to once per 20 minutes
 - Non-blocking, runs in background coroutine
 - Respects user preference (can be disabled in settings)
 
@@ -31,7 +31,7 @@ Successfully implemented a comprehensive auto-update feature for the NewsAgent A
   - Release notes (first 200 characters)
 - Three options:
   - **Update Now** - Downloads and installs immediately
-  - **Later** - Postpones until next app start (after 24 hours)
+  - **Later** - Postpones until next app start (after 20 minutes)
   - **Skip This Version** - Never shows this version again
 
 ### 3. Secure Download & Installation
@@ -150,7 +150,7 @@ Android installer opens
 ## Performance Considerations
 
 ### API Rate Limiting
-- Update check limited to once per 24 hours
+- Update check limited to once per 20 minutes
 - Prevents excessive GitHub API calls
 - Respects GitHub's rate limits
 
@@ -173,7 +173,7 @@ Android installer opens
 - [ ] "Later" dismisses dialog
 - [ ] "Skip This Version" prevents future notifications
 - [ ] Settings toggle works correctly
-- [ ] 24-hour rate limiting works
+- [ ] 20-minute rate limiting works
 - [ ] Download progress shows in notification
 - [ ] Installation prompt appears after download
 - [ ] Works on different Android versions (7.0+)

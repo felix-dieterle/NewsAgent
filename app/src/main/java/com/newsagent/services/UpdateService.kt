@@ -30,7 +30,7 @@ class UpdateService(private val context: Context) {
         private const val GITHUB_REPO = "NewsAgent"
         private const val PREF_KEY_LAST_UPDATE_CHECK = "last_update_check"
         private const val PREF_KEY_SKIP_VERSION = "skip_version"
-        private const val UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L // 24 hours
+        private const val UPDATE_CHECK_INTERVAL_MS = 20 * 60 * 1000L // 20 minutes
     }
     
     private val prefs = context.getSharedPreferences("newsagent_prefs", Context.MODE_PRIVATE)
