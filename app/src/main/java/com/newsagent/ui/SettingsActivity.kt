@@ -1,6 +1,7 @@
 package com.newsagent.ui
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -21,7 +22,10 @@ class SettingsActivity : AppCompatActivity() {
         
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         
-        val scrollView = ScrollView(this)
+        val scrollView = ScrollView(this).apply {
+            // Add top padding to prevent overlap with action bar
+            setPadding(0, 16, 0, 0)
+        }
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
@@ -305,10 +309,14 @@ class SettingsActivity : AppCompatActivity() {
     
     private fun addRateLimitStatus(layout: LinearLayout) {
         val rateLimiter = RateLimiter.getInstance()
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         
         // NewsAPI
         val newsApiStats = rateLimiter.getStats("news_api")
         newsApiStats?.let { stats ->
+            val newsApiKey = prefs.getString("news_api_key", "") ?: ""
+            val hasApiKey = newsApiKey.isNotEmpty()
+            
             val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
             val percentInt = (usagePercent * 100).toInt()
             
@@ -318,7 +326,11 @@ class SettingsActivity : AppCompatActivity() {
             }
             
             val indicator = RateLimitIndicatorView(this).apply {
-                setUsagePercent(usagePercent)
+                if (hasApiKey) {
+                    setUsagePercent(usagePercent)
+                } else {
+                    setColor(Color.GRAY)
+                }
             }
             container.addView(indicator)
             
@@ -327,7 +339,11 @@ class SettingsActivity : AppCompatActivity() {
             })
             
             container.addView(TextView(this).apply {
-                text = "NewsAPI: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                text = if (hasApiKey) {
+                    "NewsAPI: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                } else {
+                    "NewsAPI: Kein API-Key konfiguriert"
+                }
                 textSize = 14f
             })
             
@@ -337,6 +353,9 @@ class SettingsActivity : AppCompatActivity() {
         // GNews
         val gnewsStats = rateLimiter.getStats("gnews_api")
         gnewsStats?.let { stats ->
+            val gnewsApiKey = prefs.getString("gnews_api_token", "") ?: ""
+            val hasApiKey = gnewsApiKey.isNotEmpty()
+            
             val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
             val percentInt = (usagePercent * 100).toInt()
             
@@ -346,7 +365,11 @@ class SettingsActivity : AppCompatActivity() {
             }
             
             val indicator = RateLimitIndicatorView(this).apply {
-                setUsagePercent(usagePercent)
+                if (hasApiKey) {
+                    setUsagePercent(usagePercent)
+                } else {
+                    setColor(Color.GRAY)
+                }
             }
             container.addView(indicator)
             
@@ -355,7 +378,11 @@ class SettingsActivity : AppCompatActivity() {
             })
             
             container.addView(TextView(this).apply {
-                text = "GNews: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                text = if (hasApiKey) {
+                    "GNews: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                } else {
+                    "GNews: Kein API-Key konfiguriert"
+                }
                 textSize = 14f
             })
             
@@ -365,6 +392,9 @@ class SettingsActivity : AppCompatActivity() {
         // OpenRouter (AI)
         val openRouterStats = rateLimiter.getStats("openrouter_api")
         openRouterStats?.let { stats ->
+            val aiApiKey = prefs.getString("openrouter_api_key", "") ?: ""
+            val hasApiKey = aiApiKey.isNotEmpty()
+            
             val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
             val percentInt = (usagePercent * 100).toInt()
             
@@ -374,7 +404,11 @@ class SettingsActivity : AppCompatActivity() {
             }
             
             val indicator = RateLimitIndicatorView(this).apply {
-                setUsagePercent(usagePercent)
+                if (hasApiKey) {
+                    setUsagePercent(usagePercent)
+                } else {
+                    setColor(Color.GRAY)
+                }
             }
             container.addView(indicator)
             
@@ -383,7 +417,11 @@ class SettingsActivity : AppCompatActivity() {
             })
             
             container.addView(TextView(this).apply {
-                text = "AI API: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                text = if (hasApiKey) {
+                    "AI API: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                } else {
+                    "AI API: Kein API-Key konfiguriert"
+                }
                 textSize = 14f
             })
             
@@ -393,6 +431,10 @@ class SettingsActivity : AppCompatActivity() {
         // Google Custom Search
         val googleStats = rateLimiter.getStats("google_custom_search")
         googleStats?.let { stats ->
+            val googleApiKey = prefs.getString("google_api_key", "") ?: ""
+            val googleSearchEngineId = prefs.getString("google_search_engine_id", "") ?: ""
+            val hasApiKey = googleApiKey.isNotEmpty() && googleSearchEngineId.isNotEmpty()
+            
             val usagePercent = stats.currentRequests.toFloat() / stats.maxRequests
             val percentInt = (usagePercent * 100).toInt()
             
@@ -402,7 +444,11 @@ class SettingsActivity : AppCompatActivity() {
             }
             
             val indicator = RateLimitIndicatorView(this).apply {
-                setUsagePercent(usagePercent)
+                if (hasApiKey) {
+                    setUsagePercent(usagePercent)
+                } else {
+                    setColor(Color.GRAY)
+                }
             }
             container.addView(indicator)
             
@@ -411,7 +457,11 @@ class SettingsActivity : AppCompatActivity() {
             })
             
             container.addView(TextView(this).apply {
-                text = "Google Search: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                text = if (hasApiKey) {
+                    "Google Search: ${stats.remainingRequests}/${stats.maxRequests} ($percentInt%)"
+                } else {
+                    "Google Search: Kein API-Key konfiguriert"
+                }
                 textSize = 14f
             })
             
@@ -419,7 +469,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         
         layout.addView(TextView(this).apply {
-            text = "🟢 Grün: < 70% | 🟡 Gelb: 70-99% | 🔴 Rot: Limit erreicht"
+            text = "⚪ Grau: Kein API-Key | 🟢 Grün: < 70% | 🟡 Gelb: 70-99% | 🔴 Rot: Limit erreicht"
             textSize = 12f
             setTextColor(0xFF666666.toInt())
             setPadding(0, 16, 0, 0)
