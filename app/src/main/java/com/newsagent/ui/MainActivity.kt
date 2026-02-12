@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var aiSummaryService: AiSummaryService
     private lateinit var credibilityService: CredibilityCheckService
     private lateinit var searchStrategySelector: SearchStrategySelector
+    private lateinit var updateService: UpdateService
     
     private val searchThrottler = SearchThrottler.getInstance()
     private val articles = mutableListOf<NewsArticle>()
@@ -50,6 +51,7 @@ class MainActivity : AppCompatActivity() {
             aiSummaryService = AiSummaryService(this)
             credibilityService = CredibilityCheckService(this)
             searchStrategySelector = SearchStrategySelector(this)
+            updateService = UpdateService(this)
             Logger.d("MainActivity", "Services initialized successfully")
             
             // Setup UI
@@ -65,6 +67,10 @@ class MainActivity : AppCompatActivity() {
             // Schedule periodic updates
             Logger.d("MainActivity", "Scheduling periodic updates...")
             scheduleNewsUpdates()
+            
+            // Check for app updates
+            Logger.d("MainActivity", "Checking for app updates...")
+            checkForAppUpdate()
             
             Logger.i("MainActivity", "onCreate completed successfully")
         } catch (e: Exception) {
@@ -667,5 +673,173 @@ class MainActivity : AppCompatActivity() {
                 ).show()
             }
         }
+    }
+    
+    /**
+     * Check for app updates from GitHub releases
+     * Shows a dialog if an update is available
+     */
+    private fun checkForAppUpdate() {
+        // Check if auto-update is enabled
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+        val autoUpdateEnabled = prefs.getBoolean("auto_update_enabled", true)
+        
+        if (!autoUpdateEnabled) {
+            Logger.d("MainActivity", "Auto-update is disabled in settings")
+            return
+        }
+        
+        // Check if we should perform an update check based on interval
+        if (!updateService.shouldCheckForUpdate()) {
+            Logger.d("MainActivity", "Skipping update check - too soon since last check")
+            return
+        }
+        
+        lifecycleScope.launch {
+            try {
+                val updateInfo = updateService.checkForUpdate()
+                updateService.updateLastCheckTime()
+                
+                if (updateInfo == null) {
+                    Logger.d("MainActivity", "Could not check for updates")
+                    return@launch
+                }
+                
+                if (updateInfo.isUpdateAvailable && updateInfo.downloadUrl != null) {
+                    Logger.i("MainActivity", "Update available: ${updateInfo.latestVersion}")
+                    showUpdateDialog(updateInfo)
+                } else {
+                    Logger.d("MainActivity", "No update available. Current: ${updateInfo.currentVersion}")
+                }
+            } catch (e: Exception) {
+                Logger.e("MainActivity", "Error checking for updates", e)
+            }
+        }
+    }
+    
+    /**
+     * Show update dialog to the user
+     */
+    private fun showUpdateDialog(updateInfo: UpdateService.UpdateInfo) {
+        val message = buildString {
+            appendLine("Eine neue Version ist verfügbar!")
+            appendLine()
+            appendLine("Aktuelle Version: ${updateInfo.currentVersion}")
+            appendLine("Neue Version: ${updateInfo.latestVersion}")
+            appendLine()
+            if (updateInfo.releaseNotes.isNotBlank()) {
+                appendLine("Was ist neu:")
+                appendLine(updateInfo.releaseNotes.take(200))
+                if (updateInfo.releaseNotes.length > 200) {
+                    appendLine("...")
+                }
+            }
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("Update verfügbar")
+            .setMessage(message)
+            .setPositiveButton("Aktualisieren") { _, _ ->
+                updateInfo.downloadUrl?.let { url ->
+                    downloadUpdate(url)
+                }
+            }
+            .setNegativeButton("Später") { _, _ ->
+                Logger.d("MainActivity", "User postponed update")
+            }
+            .setNeutralButton("Diese Version überspringen") { _, _ ->
+                updateService.skipVersion(updateInfo.latestVersion)
+                Logger.d("MainActivity", "User skipped version ${updateInfo.latestVersion}")
+            }
+            .setCancelable(true)
+            .show()
+    }
+    
+    /**
+     * Download the update APK
+     */
+    private fun downloadUpdate(downloadUrl: String) {
+        try {
+            Logger.i("MainActivity", "Starting update download")
+            
+            // Show download started message
+            Toast.makeText(
+                this,
+                "Update wird heruntergeladen...",
+                Toast.LENGTH_LONG
+            ).show()
+            
+            // Start download
+            val downloadId = updateService.downloadAndInstallUpdate(downloadUrl)
+            
+            // Register broadcast receiver to handle download completion
+            registerDownloadReceiver(downloadId)
+            
+        } catch (e: Exception) {
+            Logger.e("MainActivity", "Error downloading update", e)
+            Toast.makeText(
+                this,
+                "Fehler beim Herunterladen des Updates: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+    
+    /**
+     * Register receiver to handle download completion
+     */
+    private fun registerDownloadReceiver(downloadId: Long) {
+        val receiver = android.content.BroadcastReceiver()
+        
+        val onReceive = fun(_: android.content.Context, intent: android.content.Intent) {
+            val id = intent.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (id == downloadId) {
+                Logger.i("MainActivity", "Download completed")
+                
+                // Get the downloaded file
+                val downloadManager = getSystemService(DOWNLOAD_SERVICE) as android.app.DownloadManager
+                val query = android.app.DownloadManager.Query().setFilterById(downloadId)
+                val cursor = downloadManager.query(query)
+                
+                if (cursor.moveToFirst()) {
+                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_STATUS))
+                    
+                    if (status == android.app.DownloadManager.STATUS_SUCCESSFUL) {
+                        val uriString = cursor.getString(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_LOCAL_URI))
+                        val apkFile = java.io.File(android.net.Uri.parse(uriString).path!!)
+                        
+                        // Install the APK
+                        updateService.installApk(apkFile)
+                    } else {
+                        Logger.e("MainActivity", "Download failed with status: $status")
+                        Toast.makeText(
+                            this,
+                            "Update-Download fehlgeschlagen",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                cursor.close()
+                
+                // Unregister receiver
+                try {
+                    unregisterReceiver(this)
+                } catch (e: Exception) {
+                    Logger.w("MainActivity", "Error unregistering receiver", e)
+                }
+            }
+        }
+        
+        // Create a proper BroadcastReceiver object
+        val broadcastReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+                onReceive(context, intent)
+            }
+        }
+        
+        registerReceiver(
+            broadcastReceiver,
+            android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        )
     }
 }
