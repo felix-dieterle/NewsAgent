@@ -878,7 +878,7 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val originalKey = prefs.getString("news_api_key", "")
         
-        try {
+        val result = try {
             // Save temp API key synchronously
             prefs.edit().putString("news_api_key", apiKey).commit()
             
@@ -897,6 +897,8 @@ class SettingsActivity : AppCompatActivity() {
             // Restore original key synchronously
             prefs.edit().putString("news_api_key", originalKey).commit()
         }
+        
+        result
     }
     
     /**
@@ -906,7 +908,7 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val originalKey = prefs.getString("gnews_api_token", "")
         
-        try {
+        val result = try {
             // Save temp API key synchronously
             prefs.edit().putString("gnews_api_token", apiKey).commit()
             
@@ -925,6 +927,8 @@ class SettingsActivity : AppCompatActivity() {
             // Restore original key synchronously
             prefs.edit().putString("gnews_api_token", originalKey).commit()
         }
+        
+        result
     }
     
     /**
@@ -934,7 +938,7 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val originalKey = prefs.getString("openrouter_api_key", "")
         
-        try {
+        val result = try {
             // Save temp API key synchronously
             prefs.edit().putString("openrouter_api_key", apiKey).commit()
             
@@ -966,6 +970,8 @@ class SettingsActivity : AppCompatActivity() {
             // Restore original key synchronously
             prefs.edit().putString("openrouter_api_key", originalKey).commit()
         }
+        
+        result
     }
     
     /**
@@ -976,7 +982,7 @@ class SettingsActivity : AppCompatActivity() {
         val originalKey = prefs.getString("google_api_key", "")
         val originalEngineId = prefs.getString("google_search_engine_id", "")
         
-        try {
+        val result = try {
             // Save temp API keys synchronously
             prefs.edit()
                 .putString("google_api_key", apiKey)
@@ -1001,6 +1007,8 @@ class SettingsActivity : AppCompatActivity() {
                 .putString("google_search_engine_id", originalEngineId)
                 .commit()
         }
+        
+        result
     }
     
     override fun onSupportNavigateUp(): Boolean {
