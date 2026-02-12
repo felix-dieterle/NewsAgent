@@ -36,6 +36,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchStrategySelector: SearchStrategySelector
     private lateinit var updateService: UpdateService
     
+    private var updateDownloadReceiver: android.content.BroadcastReceiver? = null
+    
     private val searchThrottler = SearchThrottler.getInstance()
     private val articles = mutableListOf<NewsArticle>()
     
@@ -789,6 +791,15 @@ class MainActivity : AppCompatActivity() {
      * Register receiver to handle download completion
      */
     private fun registerDownloadReceiver(downloadId: Long) {
+        // Unregister any existing receiver first
+        updateDownloadReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (e: Exception) {
+                Logger.w("MainActivity", "Error unregistering previous receiver", e)
+            }
+        }
+        
         // Create a proper BroadcastReceiver object
         val broadcastReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
@@ -805,11 +816,33 @@ class MainActivity : AppCompatActivity() {
                         val status = cursor.getInt(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_STATUS))
                         
                         if (status == android.app.DownloadManager.STATUS_SUCCESSFUL) {
-                            val uriString = cursor.getString(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_LOCAL_URI))
-                            val apkFile = java.io.File(android.net.Uri.parse(uriString).path!!)
+                            // Get the file path from the local filename column
+                            val localFilenameIndex = cursor.getColumnIndex(android.app.DownloadManager.COLUMN_LOCAL_FILENAME)
+                            val localUriIndex = cursor.getColumnIndex(android.app.DownloadManager.COLUMN_LOCAL_URI)
                             
-                            // Install the APK
-                            updateService.installApk(apkFile)
+                            val apkFile = if (localFilenameIndex >= 0) {
+                                val filename = cursor.getString(localFilenameIndex)
+                                if (filename != null) java.io.File(filename) else null
+                            } else if (localUriIndex >= 0) {
+                                val uriString = cursor.getString(localUriIndex)
+                                if (uriString != null) {
+                                    val uri = android.net.Uri.parse(uriString)
+                                    val path = uri.path
+                                    if (path != null) java.io.File(path) else null
+                                } else null
+                            } else null
+                            
+                            if (apkFile != null && apkFile.exists()) {
+                                // Install the APK
+                                updateService.installApk(apkFile)
+                            } else {
+                                Logger.e("MainActivity", "Downloaded APK file not found")
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "Update-Datei nicht gefunden",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         } else {
                             Logger.e("MainActivity", "Download failed with status: $status")
                             Toast.makeText(
@@ -824,6 +857,7 @@ class MainActivity : AppCompatActivity() {
                     // Unregister receiver
                     try {
                         unregisterReceiver(this)
+                        updateDownloadReceiver = null
                     } catch (e: Exception) {
                         Logger.w("MainActivity", "Error unregistering receiver", e)
                     }
@@ -831,9 +865,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
+        updateDownloadReceiver = broadcastReceiver
         registerReceiver(
             broadcastReceiver,
             android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE)
         )
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        
+        // Clean up the download receiver if still registered
+        updateDownloadReceiver?.let {
+            try {
+                unregisterReceiver(it)
+                updateDownloadReceiver = null
+            } catch (e: Exception) {
+                Logger.w("MainActivity", "Error unregistering receiver in onDestroy", e)
+            }
+        }
     }
 }

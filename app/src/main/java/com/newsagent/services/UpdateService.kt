@@ -171,13 +171,16 @@ class UpdateService(private val context: Context) {
         
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         
+        // Use a unique filename to prevent replacement attacks
+        val uniqueFilename = "NewsAgent-update-${System.currentTimeMillis()}.apk"
+        
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setTitle("NewsAgent Update")
             setDescription("Downloading new version...")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             setDestinationInExternalPublicDir(
                 Environment.DIRECTORY_DOWNLOADS,
-                "NewsAgent-update.apk"
+                uniqueFilename
             )
             setAllowedOverMetered(true)
             setAllowedOverRoaming(false)
@@ -218,8 +221,17 @@ class UpdateService(private val context: Context) {
      * @return negative if v1 < v2, 0 if equal, positive if v1 > v2
      */
     private fun compareVersions(v1: String, v2: String): Int {
-        val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
-        val parts2 = v2.split(".").map { it.toIntOrNull() ?: 0 }
+        // Strip any non-numeric suffixes (e.g., "-beta", "-rc1")
+        val cleanV1 = v1.split("-", "+")[0]
+        val cleanV2 = v2.split("-", "+")[0]
+        
+        val parts1 = cleanV1.split(".").mapNotNull { it.toIntOrNull() }
+        val parts2 = cleanV2.split(".").mapNotNull { it.toIntOrNull() }
+        
+        // If either version has non-numeric components, log warning
+        if (parts1.size != cleanV1.split(".").size || parts2.size != cleanV2.split(".").size) {
+            Logger.w("UpdateService", "Version contains non-numeric components: v1=$v1, v2=$v2")
+        }
         
         val maxLength = maxOf(parts1.size, parts2.size)
         
