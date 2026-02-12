@@ -173,7 +173,8 @@ class NewsRepository(private val context: Context) {
         try {
             val apiKey = prefs.getString("news_api_key", "") ?: ""
             if (apiKey.isEmpty()) {
-                Logger.w("NewsRepository", "News API key not configured")
+                Logger.w("NewsRepository", "⚠️ News API key not configured - returning 0 results")
+                Logger.i("NewsRepository", "➡️ Bitte API-Schlüssel in den Einstellungen konfigurieren")
                 return@withContext emptyList<NewsArticle>()
             }
             
@@ -190,7 +191,8 @@ class NewsRepository(private val context: Context) {
             // Check rate limit
             if (!rateLimiter.allowRequest("news_api")) {
                 val remaining = rateLimiter.getRemainingRequests("news_api")
-                Logger.w("NewsRepository", "Rate limit reached. Remaining requests: $remaining")
+                Logger.w("NewsRepository", "⚠️ Rate limit reached. Remaining requests: $remaining - returning 0 results")
+                Logger.i("NewsRepository", "➡️ Warten Sie bis das Rate Limit zurückgesetzt wird oder verwenden Sie RSS Feeds")
                 return@withContext emptyList<NewsArticle>()
             }
             
@@ -204,18 +206,19 @@ class NewsRepository(private val context: Context) {
             
             if (response.isSuccessful && response.body() != null) {
                 val articles = response.body()!!.articles.map { convertToNewsArticle(it) }
-                Logger.i("NewsRepository", "Successfully fetched ${articles.size} headlines")
+                Logger.i("NewsRepository", "✅ Successfully fetched ${articles.size} headlines")
                 
                 // Cache the results
                 cacheManager.cacheArticles(cacheKey, articles)
                 
                 articles
             } else {
-                Logger.e("NewsRepository", "API request failed: ${response.code()} - ${response.message()}")
+                Logger.e("NewsRepository", "❌ API request failed: ${response.code()} - ${response.message()}")
+                Logger.i("NewsRepository", "➡️ Überprüfen Sie Ihren API-Schlüssel und Rate Limits")
                 emptyList()
             }
         } catch (e: Exception) {
-            Logger.e("NewsRepository", "Exception fetching headlines", e)
+            Logger.e("NewsRepository", "❌ Exception fetching headlines", e)
             e.printStackTrace()
             emptyList()
         }
@@ -354,7 +357,8 @@ class NewsRepository(private val context: Context) {
         try {
             val apiToken = prefs.getString("gnews_api_token", "") ?: ""
             if (apiToken.isEmpty()) {
-                Logger.w("NewsRepository", "GNews API token not configured")
+                Logger.w("NewsRepository", "⚠️ GNews API token not configured - returning 0 results")
+                Logger.i("NewsRepository", "➡️ Bitte GNews API-Token in den Einstellungen konfigurieren")
                 return@withContext emptyList<NewsArticle>()
             }
             
@@ -372,7 +376,8 @@ class NewsRepository(private val context: Context) {
             // Check rate limit
             if (!rateLimiter.allowRequest("gnews_api")) {
                 val remaining = rateLimiter.getRemainingRequests("gnews_api")
-                Logger.w("NewsRepository", "GNews rate limit reached. Remaining requests: $remaining")
+                Logger.w("NewsRepository", "⚠️ GNews rate limit reached. Remaining requests: $remaining - returning 0 results")
+                Logger.i("NewsRepository", "➡️ Warten Sie bis das Rate Limit zurückgesetzt wird oder verwenden Sie RSS Feeds")
                 return@withContext emptyList<NewsArticle>()
             }
             
@@ -387,18 +392,19 @@ class NewsRepository(private val context: Context) {
             
             if (response.isSuccessful && response.body() != null) {
                 val articles = response.body()!!.articles.map { convertFromGNewsArticle(it) }
-                Logger.i("NewsRepository", "Successfully fetched ${articles.size} free headlines")
+                Logger.i("NewsRepository", "✅ Successfully fetched ${articles.size} free headlines")
                 
                 // Cache the results
                 cacheManager.cacheArticles(cacheKey, articles)
                 
                 articles
             } else {
-                Logger.e("NewsRepository", "Free API request failed: ${response.code()} - ${response.message()}")
+                Logger.e("NewsRepository", "❌ Free API request failed: ${response.code()} - ${response.message()}")
+                Logger.i("NewsRepository", "➡️ Überprüfen Sie Ihren GNews API-Token und Rate Limits")
                 emptyList()
             }
         } catch (e: Exception) {
-            Logger.e("NewsRepository", "Exception fetching free headlines", e)
+            Logger.e("NewsRepository", "❌ Exception fetching free headlines", e)
             e.printStackTrace()
             emptyList()
         }
@@ -425,7 +431,7 @@ class NewsRepository(private val context: Context) {
     suspend fun fetchRssNews(): List<NewsArticle> = withContext(Dispatchers.IO) {
         try {
             val feedSources = getRssFeedSourceNames()
-            Logger.i("NewsRepository", "Querying RSS feeds: $feedSources")
+            Logger.i("NewsRepository", "📰 Querying RSS feeds (100% kostenlos): $feedSources")
             
             val parser = RssFeedParser()
             val allArticles = mutableListOf<NewsArticle>()
@@ -452,25 +458,30 @@ class NewsRepository(private val context: Context) {
                         val newsArticles = rssArticles.map { convertFromRssArticle(it) }
                         allArticles.addAll(newsArticles)
                         successCount++
-                        Logger.i("NewsRepository", "✓ $sourceName: ${newsArticles.size} articles fetched")
+                        Logger.i("NewsRepository", "✅ $sourceName: ${newsArticles.size} articles fetched")
                     } else {
                         failCount++
-                        Logger.w("NewsRepository", "✗ $sourceName: Failed (${response.code})")
+                        Logger.w("NewsRepository", "⚠️ $sourceName: Failed (${response.code})")
                     }
                 } catch (e: Exception) {
                     failCount++
-                    Logger.e("NewsRepository", "✗ $sourceName: Exception - ${e.message}", e)
+                    Logger.e("NewsRepository", "❌ $sourceName: Exception - ${e.message}", e)
                 }
             }
             
             Logger.i("NewsRepository", "RSS fetch complete: $successCount succeeded, $failCount failed (Total articles: ${allArticles.size})")
+            
+            if (allArticles.isEmpty()) {
+                Logger.w("NewsRepository", "⚠️ No RSS articles fetched - alle Quellen haben fehlgeschlagen")
+                Logger.i("NewsRepository", "➡️ Überprüfen Sie Ihre Internetverbindung")
+            }
             
             val maxArticles = prefs.getInt("max_articles", 10)
             val limitedArticles = allArticles.take(maxArticles)
             Logger.i("NewsRepository", "Returning ${limitedArticles.size} RSS articles (limited from ${allArticles.size})")
             limitedArticles
         } catch (e: Exception) {
-            Logger.e("NewsRepository", "Exception fetching RSS news", e)
+            Logger.e("NewsRepository", "❌ Exception fetching RSS news", e)
             e.printStackTrace()
             emptyList()
         }

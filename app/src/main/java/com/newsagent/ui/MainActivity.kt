@@ -798,7 +798,14 @@ class MainActivity : AppCompatActivity() {
         
         // Check if we should perform an update check based on interval
         if (!updateService.shouldCheckForUpdate()) {
-            Logger.d("MainActivity", "Skipping update check - too soon since last check")
+            val timeUntilNextCheck = updateService.getTimeUntilNextCheck()
+            val minutesRemaining = (timeUntilNextCheck / 60000).toInt()
+            Logger.d("MainActivity", "Skipping update check - too soon since last check ($minutesRemaining minutes remaining)")
+            Toast.makeText(
+                this@MainActivity,
+                "Update-Prüfung übersprungen. Nächste Prüfung in $minutesRemaining Minuten.",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
         
