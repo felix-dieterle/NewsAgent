@@ -24,7 +24,8 @@ class SettingsActivity : AppCompatActivity() {
         
         val scrollView = ScrollView(this).apply {
             // Add top padding to prevent overlap with action bar
-            setPadding(0, 16, 0, 0)
+            // Add bottom padding to prevent overlap with navigation bar
+            setPadding(0, 16, 0, 120)
         }
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
