@@ -150,6 +150,18 @@ class UpdateService(private val context: Context) {
     }
     
     /**
+     * Get time remaining until next update check (in milliseconds)
+     */
+    fun getTimeUntilNextCheck(): Long {
+        val lastCheck = prefs.getLong(PREF_KEY_LAST_UPDATE_CHECK, 0)
+        val now = System.currentTimeMillis()
+        val timeSinceLastCheck = now - lastCheck
+        val timeRemaining = UPDATE_CHECK_INTERVAL_MS - timeSinceLastCheck
+        
+        return maxOf(0, timeRemaining)
+    }
+    
+    /**
      * Mark a version as skipped by the user
      */
     fun skipVersion(version: String) {
