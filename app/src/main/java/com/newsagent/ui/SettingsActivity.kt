@@ -7,9 +7,13 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.newsagent.services.NewsUpdateWorker
 import com.newsagent.utils.Logger
 import com.newsagent.utils.RateLimiter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -651,95 +655,31 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(false)
             .show()
         
-        // Fetch articles in background
-        Thread {
+        // Fetch articles in background using coroutines
+        lifecycleScope.launch {
             try {
-                val newsRepository = com.newsagent.services.NewsRepository(this)
-                val articles = when (currentSource) {
-                    "gnews" -> {
-                        kotlinx.coroutines.runBlocking {
-                            newsRepository.fetchTopHeadlinesFree()
-                        }
-                    }
-                    "rss" -> {
-                        kotlinx.coroutines.runBlocking {
-                            newsRepository.fetchRssNews()
-                        }
-                    }
-                    else -> {
-                        kotlinx.coroutines.runBlocking {
-                            newsRepository.fetchTopHeadlines()
-                        }
+                val newsRepository = com.newsagent.services.NewsRepository(this@SettingsActivity)
+                val articles = withContext(Dispatchers.IO) {
+                    when (currentSource) {
+                        "gnews" -> newsRepository.fetchTopHeadlinesFree()
+                        "rss" -> newsRepository.fetchRssNews()
+                        else -> newsRepository.fetchTopHeadlines()
                     }
                 }
                 
-                runOnUiThread {
-                    loadingDialog.dismiss()
-                    
-                    if (articles.isEmpty()) {
-                        AlertDialog.Builder(this)
-                            .setTitle("⚠️ Keine Artikel gefunden")
-                            .setMessage(
-                                "Quelle: $sourceName\n\n" +
-                                "Es wurden keine Artikel gefunden.\n\n" +
-                                "Mögliche Ursachen:\n" +
-                                "• API-Schlüssel fehlt oder ist ungültig\n" +
-                                "• Rate Limit erreicht\n" +
-                                "• Netzwerkverbindung fehlt\n" +
-                                "• RSS-Feeds sind nicht verfügbar\n\n" +
-                                "Überprüfen Sie die Logs für Details."
-                            )
-                            .setPositiveButton("Logs anzeigen") { _, _ ->
-                                showLogs()
-                            }
-                            .setNegativeButton("Schließen", null)
-                            .show()
-                    } else {
-                        // Show article list
-                        val articleTitles = articles.mapIndexed { index, article ->
-                            "${index + 1}. ${article.title}\n   Quelle: ${article.source}\n   ${article.publishedAt ?: "Kein Datum"}"
-                        }
-                        
-                        val scrollView = ScrollView(this)
-                        val textView = TextView(this).apply {
-                            text = buildString {
-                                appendLine("✅ Erfolgreich geladen!")
-                                appendLine()
-                                appendLine("Quelle: $sourceName")
-                                appendLine("Anzahl: ${articles.size} Artikel")
-                                appendLine()
-                                appendLine("═══════════════════════════════")
-                                appendLine()
-                                articleTitles.forEach { title ->
-                                    appendLine(title)
-                                    appendLine()
-                                }
-                            }
-                            setPadding(32, 32, 32, 32)
-                            textSize = 14f
-                            setTextIsSelectable(true)
-                        }
-                        scrollView.addView(textView)
-                        
-                        AlertDialog.Builder(this)
-                            .setTitle("Artikel von $sourceName")
-                            .setView(scrollView)
-                            .setPositiveButton("Schließen", null)
-                            .setNeutralButton("Logs anzeigen") { _, _ ->
-                                showLogs()
-                            }
-                            .show()
-                    }
-                }
-            } catch (e: Exception) {
-                Logger.e("SettingsActivity", "Error testing source connection", e)
-                runOnUiThread {
-                    loadingDialog.dismiss()
-                    AlertDialog.Builder(this)
-                        .setTitle("❌ Fehler beim Testen")
+                loadingDialog.dismiss()
+                
+                if (articles.isEmpty()) {
+                    AlertDialog.Builder(this@SettingsActivity)
+                        .setTitle("⚠️ Keine Artikel gefunden")
                         .setMessage(
                             "Quelle: $sourceName\n\n" +
-                            "Fehler: ${e.message}\n\n" +
+                            "Es wurden keine Artikel gefunden.\n\n" +
+                            "Mögliche Ursachen:\n" +
+                            "• API-Schlüssel fehlt oder ist ungültig\n" +
+                            "• Rate Limit erreicht\n" +
+                            "• Netzwerkverbindung fehlt\n" +
+                            "• RSS-Feeds sind nicht verfügbar\n\n" +
                             "Überprüfen Sie die Logs für Details."
                         )
                         .setPositiveButton("Logs anzeigen") { _, _ ->
@@ -747,9 +687,59 @@ class SettingsActivity : AppCompatActivity() {
                         }
                         .setNegativeButton("Schließen", null)
                         .show()
+                } else {
+                    // Show article list
+                    val articleTitles = articles.mapIndexed { index, article ->
+                        "${index + 1}. ${article.title}\n   Quelle: ${article.source}\n   ${article.publishedAt ?: "Kein Datum"}"
+                    }
+                    
+                    val scrollView = ScrollView(this@SettingsActivity)
+                    val textView = TextView(this@SettingsActivity).apply {
+                        text = buildString {
+                            appendLine("✅ Erfolgreich geladen!")
+                            appendLine()
+                            appendLine("Quelle: $sourceName")
+                            appendLine("Anzahl: ${articles.size} Artikel")
+                            appendLine()
+                            appendLine("═══════════════════════════════")
+                            appendLine()
+                            articleTitles.forEach { title ->
+                                appendLine(title)
+                                appendLine()
+                            }
+                        }
+                        setPadding(32, 32, 32, 32)
+                        textSize = 14f
+                        setTextIsSelectable(true)
+                    }
+                    scrollView.addView(textView)
+                    
+                    AlertDialog.Builder(this@SettingsActivity)
+                        .setTitle("Artikel von $sourceName")
+                        .setView(scrollView)
+                        .setPositiveButton("Schließen", null)
+                        .setNeutralButton("Logs anzeigen") { _, _ ->
+                            showLogs()
+                        }
+                        .show()
                 }
+            } catch (e: Exception) {
+                Logger.e("SettingsActivity", "Error testing source connection", e)
+                loadingDialog.dismiss()
+                AlertDialog.Builder(this@SettingsActivity)
+                    .setTitle("❌ Fehler beim Testen")
+                    .setMessage(
+                        "Quelle: $sourceName\n\n" +
+                        "Fehler: ${e.message}\n\n" +
+                        "Überprüfen Sie die Logs für Details."
+                    )
+                    .setPositiveButton("Logs anzeigen") { _, _ ->
+                        showLogs()
+                    }
+                    .setNegativeButton("Schließen", null)
+                    .show()
             }
-        }.start()
+        }
     }
     
     override fun onSupportNavigateUp(): Boolean {
