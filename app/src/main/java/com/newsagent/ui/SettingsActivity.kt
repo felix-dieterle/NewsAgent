@@ -194,6 +194,21 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(0, 4, 0, 0)
         })
         
+        // Auto Update Toggle
+        val autoUpdateCheckbox = CheckBox(this).apply {
+            text = "Automatische Updates aktivieren"
+            isChecked = prefs.getBoolean("auto_update_enabled", true)
+            setPadding(0, 8, 0, 0)
+        }
+        layout.addView(autoUpdateCheckbox)
+        
+        layout.addView(TextView(this).apply {
+            text = "Prüft beim App-Start auf neue Versionen von GitHub"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 0)
+        })
+        
         // Max Articles
         layout.addView(TextView(this).apply {
             text = "Maximale Artikel pro Update"
@@ -296,6 +311,7 @@ class SettingsActivity : AppCompatActivity() {
                     autoSummaryCheckbox.isChecked,
                     credibilityCheckbox.isChecked,
                     aiModeCheckbox.isChecked,
+                    autoUpdateCheckbox.isChecked,
                     maxArticlesInput.text.toString().toIntOrNull() ?: 10
                 )
             }
@@ -487,6 +503,7 @@ class SettingsActivity : AppCompatActivity() {
         enableAutoSummary: Boolean,
         enableCredibilityCheck: Boolean,
         aiModeEnabled: Boolean,
+        autoUpdateEnabled: Boolean,
         maxArticles: Int
     ) {
         Logger.d("SettingsActivity", "Saving settings...")
@@ -519,6 +536,7 @@ class SettingsActivity : AppCompatActivity() {
             putBoolean("enable_auto_summary", enableAutoSummary)
             putBoolean("enable_credibility_check", enableCredibilityCheck)
             putBoolean("ai_mode_enabled", aiModeEnabled)
+            putBoolean("auto_update_enabled", autoUpdateEnabled)
             putInt("max_articles", maxArticles)
             apply()
         }
