@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
-import com.newsagent.BuildConfig
 import com.newsagent.api.GitHubApi
 import com.newsagent.api.GitHubRelease
 import com.newsagent.utils.Logger
@@ -81,7 +80,15 @@ class UpdateService(private val context: Context) {
                 return@withContext null
             }
             
-            val currentVersion = BuildConfig.VERSION_NAME
+            // Get current version from package manager
+            val currentVersion = try {
+                val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                pInfo.versionName ?: "1.0"
+            } catch (e: Exception) {
+                Logger.e("UpdateService", "Error getting version info", e)
+                "1.0"
+            }
+            
             val latestVersion = release.tag_name.removePrefix("v")
             
             Logger.i("UpdateService", "Current version: $currentVersion, Latest version: $latestVersion")
