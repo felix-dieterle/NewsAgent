@@ -9,6 +9,7 @@ import android.view.ViewGroup
 
 /**
  * Small circular indicator showing API rate limit status
+ * Gray: No API key configured
  * Green: < 70% usage
  * Yellow: 70-99% usage
  * Red: 100% usage (limit reached)
