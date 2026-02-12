@@ -816,27 +816,42 @@ class MainActivity : AppCompatActivity() {
                         val status = cursor.getInt(cursor.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_STATUS))
                         
                         if (status == android.app.DownloadManager.STATUS_SUCCESSFUL) {
-                            // Get the file path from the local filename column
-                            val localFilenameIndex = cursor.getColumnIndex(android.app.DownloadManager.COLUMN_LOCAL_FILENAME)
-                            val localUriIndex = cursor.getColumnIndex(android.app.DownloadManager.COLUMN_LOCAL_URI)
+                            // Use DownloadManager API to get the proper file URI
+                            val fileUri = downloadManager.getUriForDownloadedFile(downloadId)
                             
-                            val apkFile = if (localFilenameIndex >= 0) {
-                                val filename = cursor.getString(localFilenameIndex)
-                                if (filename != null) java.io.File(filename) else null
-                            } else if (localUriIndex >= 0) {
-                                val uriString = cursor.getString(localUriIndex)
-                                if (uriString != null) {
-                                    val uri = android.net.Uri.parse(uriString)
-                                    val path = uri.path
-                                    if (path != null) java.io.File(path) else null
-                                } else null
-                            } else null
-                            
-                            if (apkFile != null && apkFile.exists()) {
-                                // Install the APK
-                                updateService.installApk(apkFile)
+                            if (fileUri != null) {
+                                // Try to get the file path from the URI
+                                val apkFile = try {
+                                    // For file:// URIs, get the path directly
+                                    if (fileUri.scheme == "file") {
+                                        val path = fileUri.path
+                                        if (path != null) java.io.File(path) else null
+                                    } else {
+                                        // For content:// URIs, try to get the filename from the cursor
+                                        val localFilenameIndex = cursor.getColumnIndex(android.app.DownloadManager.COLUMN_LOCAL_FILENAME)
+                                        if (localFilenameIndex >= 0) {
+                                            val filename = cursor.getString(localFilenameIndex)
+                                            if (filename != null) java.io.File(filename) else null
+                                        } else null
+                                    }
+                                } catch (e: Exception) {
+                                    Logger.e("MainActivity", "Error getting file path from URI", e)
+                                    null
+                                }
+                                
+                                if (apkFile != null && apkFile.exists()) {
+                                    // Install the APK
+                                    updateService.installApk(apkFile)
+                                } else {
+                                    Logger.e("MainActivity", "Downloaded APK file not found or URI not accessible")
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        "Update-Datei nicht gefunden",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             } else {
-                                Logger.e("MainActivity", "Downloaded APK file not found")
+                                Logger.e("MainActivity", "Could not get URI for downloaded file")
                                 Toast.makeText(
                                     this@MainActivity,
                                     "Update-Datei nicht gefunden",

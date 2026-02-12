@@ -171,8 +171,8 @@ class UpdateService(private val context: Context) {
         
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         
-        // Use a unique filename to prevent replacement attacks
-        val uniqueFilename = "NewsAgent-update-${System.currentTimeMillis()}.apk"
+        // Use a unique filename with timestamp and random component to prevent replacement attacks
+        val uniqueFilename = "NewsAgent-update-${System.currentTimeMillis()}-${(0..9999).random()}.apk"
         
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setTitle("NewsAgent Update")
@@ -218,23 +218,34 @@ class UpdateService(private val context: Context) {
     
     /**
      * Compare two version strings
+     * Supports semantic versioning (e.g., 1.2.3)
+     * Pre-release versions (with -, +) are considered older than release versions
      * @return negative if v1 < v2, 0 if equal, positive if v1 > v2
      */
     private fun compareVersions(v1: String, v2: String): Int {
-        // Strip any non-numeric suffixes (e.g., "-beta", "-rc1")
+        // Check for pre-release indicators (-, +)
+        val v1HasPreRelease = v1.contains("-") || v1.contains("+")
+        val v2HasPreRelease = v2.contains("-") || v2.contains("+")
+        
+        // Strip any non-numeric suffixes for comparison
         val cleanV1 = v1.split("-", "+")[0]
         val cleanV2 = v2.split("-", "+")[0]
         
-        val parts1 = cleanV1.split(".").mapNotNull { it.toIntOrNull() }
-        val parts2 = cleanV2.split(".").mapNotNull { it.toIntOrNull() }
+        // Parse version parts
+        val v1Parts = cleanV1.split(".")
+        val v2Parts = cleanV2.split(".")
         
-        // If either version has non-numeric components, log warning
-        if (parts1.size != cleanV1.split(".").size || parts2.size != cleanV2.split(".").size) {
+        // Validate that all parts are numeric
+        val parts1 = v1Parts.mapNotNull { it.toIntOrNull() }
+        val parts2 = v2Parts.mapNotNull { it.toIntOrNull() }
+        
+        // If any part failed to parse, log warning and use what we have
+        if (parts1.size != v1Parts.size || parts2.size != v2Parts.size) {
             Logger.w("UpdateService", "Version contains non-numeric components: v1=$v1, v2=$v2")
         }
         
+        // Compare numeric parts
         val maxLength = maxOf(parts1.size, parts2.size)
-        
         for (i in 0 until maxLength) {
             val p1 = parts1.getOrNull(i) ?: 0
             val p2 = parts2.getOrNull(i) ?: 0
@@ -245,6 +256,12 @@ class UpdateService(private val context: Context) {
             }
         }
         
-        return 0
+        // If numeric parts are equal, check pre-release status
+        // Pre-release versions are considered older than release versions
+        return when {
+            v1HasPreRelease && !v2HasPreRelease -> -1  // v1 is pre-release, v2 is release
+            !v1HasPreRelease && v2HasPreRelease -> 1   // v1 is release, v2 is pre-release
+            else -> 0  // Both are same type or numeric parts differ
+        }
     }
 }
