@@ -839,7 +839,7 @@ class MainActivity : AppCompatActivity() {
                 Logger.e("MainActivity", "Error checking for updates", e)
                 Toast.makeText(
                     this@MainActivity,
-                    "Fehler bei der Update-Prüfung: ${e.message}",
+                    "Fehler bei der Update-Prüfung. Bitte später erneut versuchen.",
                     Toast.LENGTH_SHORT
                 ).show()
             }
