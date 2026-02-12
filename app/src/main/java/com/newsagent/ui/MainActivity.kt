@@ -190,6 +190,7 @@ class MainActivity : AppCompatActivity() {
         menu?.add(0, 1, 0, "Einstellungen")
         menu?.add(0, 2, 0, "Kostenlose Suche")
         menu?.add(0, 4, 0, "RSS Nachrichten")
+        menu?.add(0, 6, 0, "ℹ️ Info & Hilfe")
         
         // Add rate limit indicators menu item
         val rateLimitItem = menu?.add(0, 5, 0, "API Limits")
@@ -249,6 +250,10 @@ class MainActivity : AppCompatActivity() {
             }
             5 -> {
                 showRateLimitDetails()
+                true
+            }
+            6 -> {
+                showInfoDialog()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -379,6 +384,106 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .setNegativeButton("Abbrechen", null)
+            .show()
+    }
+    
+    /**
+     * Show information dialog explaining how the app works
+     */
+    private fun showInfoDialog() {
+        val scrollView = android.widget.ScrollView(this)
+        val textView = android.widget.TextView(this).apply {
+            setPadding(24, 16, 24, 16)
+            textSize = 14f
+            text = buildString {
+                appendLine("📰 NewsAgent - Intelligente Nachrichten-App")
+                appendLine()
+                appendLine("═══════════════════════════════")
+                appendLine()
+                appendLine("🔍 FUNKTIONEN:")
+                appendLine()
+                appendLine("• Nachrichten aus verschiedenen Quellen")
+                appendLine("  - NewsAPI.org (100 Anfragen/Tag)")
+                appendLine("  - GNews.io (100 Anfragen/Tag)")
+                appendLine("  - RSS Feeds (unbegrenzt & kostenlos)")
+                appendLine()
+                appendLine("• KI-Zusammenfassungen")
+                appendLine("  Automatische Zusammenfassung mit Kernpunkten")
+                appendLine()
+                appendLine("• Glaubwürdigkeitsprüfung")
+                appendLine("  Bewertung der Quellen-Zuverlässigkeit")
+                appendLine()
+                appendLine("• Intelligente Suche")
+                appendLine("  Optimierte Suchstrategie basierend auf API-Limits")
+                appendLine()
+                appendLine("═══════════════════════════════")
+                appendLine()
+                appendLine("⚙️ BEDIENUNG:")
+                appendLine()
+                appendLine("1. Einstellungen konfigurieren")
+                appendLine("   • API-Schlüssel eingeben (optional)")
+                appendLine("   • Nachrichtenquelle wählen")
+                appendLine("   • Update-Intervall festlegen")
+                appendLine()
+                appendLine("2. Nachrichten laden")
+                appendLine("   • Automatisch beim Start")
+                appendLine("   • Manuell über Aktualisieren-Button")
+                appendLine("   • Per Suche nach Themen")
+                appendLine()
+                appendLine("3. Artikel lesen")
+                appendLine("   • Tippen für Details")
+                appendLine("   • Zusammenfassung anzeigen")
+                appendLine("   • Glaubwürdigkeit prüfen")
+                appendLine()
+                appendLine("═══════════════════════════════")
+                appendLine()
+                appendLine("💡 MODI:")
+                appendLine()
+                appendLine("• Standard-Modus")
+                appendLine("  Bevorzugt kostenlose RSS-Feeds")
+                appendLine("  Ideal für täglichen Gebrauch")
+                appendLine()
+                appendLine("• KI-Modus")
+                appendLine("  Nutzt kostenpflichtige APIs")
+                appendLine("  Bessere Qualität & mehr Features")
+                appendLine()
+                appendLine("═══════════════════════════════")
+                appendLine()
+                appendLine("🔄 AUTOMATISCHE UPDATES:")
+                appendLine()
+                appendLine("Die App prüft beim Start auf neue Versionen")
+                appendLine("von GitHub. Sie können Updates in den")
+                appendLine("Einstellungen aktivieren/deaktivieren.")
+                appendLine()
+                appendLine("═══════════════════════════════")
+                appendLine()
+                appendLine("📊 API RATE LIMITS:")
+                appendLine()
+                appendLine("Beachten Sie die farbigen Indikatoren:")
+                appendLine("🟢 Grün: < 70% genutzt")
+                appendLine("🟡 Gelb: 70-99% genutzt")
+                appendLine("🔴 Rot: Limit erreicht")
+                appendLine("⚪ Grau: Kein API-Key konfiguriert")
+                appendLine()
+                appendLine("═══════════════════════════════")
+                appendLine()
+                appendLine("ℹ️ WEITERE HILFE:")
+                appendLine()
+                appendLine("Bei Problemen:")
+                appendLine("• Logs in Einstellungen überprüfen")
+                appendLine("• GitHub Issues melden")
+                appendLine("• API-Keys validieren")
+            }
+        }
+        scrollView.addView(textView)
+        
+        AlertDialog.Builder(this)
+            .setTitle("ℹ️ Info & Hilfe")
+            .setView(scrollView)
+            .setPositiveButton("Verstanden", null)
+            .setNeutralButton("Einstellungen öffnen") { _, _ ->
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
             .show()
     }
     
@@ -699,11 +804,23 @@ class MainActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
+                // Show user that update check is starting
+                Toast.makeText(
+                    this@MainActivity,
+                    "Suche nach App-Updates...",
+                    Toast.LENGTH_SHORT
+                ).show()
+                
                 val updateInfo = updateService.checkForUpdate()
                 updateService.updateLastCheckTime()
                 
                 if (updateInfo == null) {
                     Logger.d("MainActivity", "Could not check for updates")
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Update-Prüfung fehlgeschlagen",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@launch
                 }
                 
@@ -712,9 +829,19 @@ class MainActivity : AppCompatActivity() {
                     showUpdateDialog(updateInfo)
                 } else {
                     Logger.d("MainActivity", "No update available. Current: ${updateInfo.currentVersion}")
+                    Toast.makeText(
+                        this@MainActivity,
+                        "App ist auf dem neuesten Stand (${updateInfo.currentVersion})",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
                 Logger.e("MainActivity", "Error checking for updates", e)
+                Toast.makeText(
+                    this@MainActivity,
+                    "Fehler bei der Update-Prüfung. Bitte später erneut versuchen.",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
