@@ -261,21 +261,23 @@ class UpdateService(private val context: Context) {
     
     /**
      * Extract version code (build number) from tag name or release name
-     * Supports formats like: "v1.0-2", "1.0 (2)", "v1.0_2"
+     * Supports formats like: "v1.0-2", "1.0.1-2", "v1.0_2"
+     * Requires at least major.minor version format to avoid date confusion
      * @param tagName The Git tag name
      * @param releaseName The release name/title
      * @return The extracted version code, or 0 if not found
      */
     private fun extractVersionCode(tagName: String, releaseName: String): Int {
-        // Try to extract from tag name first (e.g., "v1.0-2" or "v1.0_2")
-        val tagPattern = Regex("""[-_](\d+)$""")
+        // Try to extract from tag name first (e.g., "v1.0-2" or "v1.0.1_2")
+        // Pattern requires at least major.minor format to avoid matching dates
+        val tagPattern = Regex("""v?\d+\.\d+(?:\.\d+)*[-_](\d+)$""")
         tagPattern.find(tagName)?.groupValues?.get(1)?.toIntOrNull()?.let {
             Logger.d("UpdateService", "Extracted version code $it from tag: $tagName")
             return it
         }
         
-        // Try to extract from release name (e.g., "Version 1.0 (2)")
-        val namePattern = Regex("""\((\d+)\)""")
+        // Try to extract from release name (e.g., "Version 1.0 (Build 2)" or "1.0 (2)" at end)
+        val namePattern = Regex("""\((?:Build\s+)?(\d+)\)\s*$""", RegexOption.IGNORE_CASE)
         namePattern.find(releaseName)?.groupValues?.get(1)?.toIntOrNull()?.let {
             Logger.d("UpdateService", "Extracted version code $it from name: $releaseName")
             return it

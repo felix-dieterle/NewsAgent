@@ -915,7 +915,7 @@ class MainActivity : AppCompatActivity() {
                 
                 // Status text
                 addView(android.widget.TextView(this@MainActivity).apply {
-                    text = "Update wird heruntergeladen...\nBitte warten Sie."
+                    text = "Update wird heruntergeladen...\n\nBitte warten Sie."
                     textAlignment = android.view.View.TEXT_ALIGNMENT_CENTER
                     setPadding(0, 30, 0, 0)
                     layoutParams = android.widget.LinearLayout.LayoutParams(
