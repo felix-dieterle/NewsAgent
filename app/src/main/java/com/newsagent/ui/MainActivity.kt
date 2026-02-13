@@ -836,10 +836,10 @@ class MainActivity : AppCompatActivity() {
                     Logger.i("MainActivity", "Update available: ${updateInfo.latestVersion}")
                     showUpdateDialog(updateInfo)
                 } else {
-                    Logger.d("MainActivity", "No update available. Current: ${updateInfo.currentVersion}")
+                    Logger.d("MainActivity", "No update available. Current: ${updateInfo.currentVersion} (${updateInfo.currentVersionCode})")
                     Toast.makeText(
                         this@MainActivity,
-                        "App ist auf dem neuesten Stand (${updateInfo.currentVersion})",
+                        "App ist auf dem neuesten Stand\nVersion: ${updateInfo.currentVersion} (Build ${updateInfo.currentVersionCode})",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
