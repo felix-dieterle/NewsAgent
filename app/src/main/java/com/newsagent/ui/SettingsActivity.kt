@@ -2,6 +2,7 @@ package com.newsagent.ui
 
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -267,6 +268,33 @@ class SettingsActivity : AppCompatActivity() {
                 setMargins(0, 32, 0, 16)
             }
             setBackgroundColor(0xFFCCCCCC.toInt())
+        })
+        
+        // App Info Section Header
+        layout.addView(TextView(this).apply {
+            text = "App-Info"
+            textSize = 20f
+            setPadding(0, 8, 0, 16)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        })
+        
+        // App Version Info
+        layout.addView(TextView(this).apply {
+            text = try {
+                val pInfo = packageManager.getPackageInfo(packageName, 0)
+                val versionName = pInfo.versionName ?: "1.0"
+                val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    pInfo.longVersionCode.toInt()
+                } else {
+                    @Suppress("DEPRECATION")
+                    pInfo.versionCode
+                }
+                "Version: $versionName (Build $versionCode)"
+            } catch (e: Exception) {
+                "Version: Unbekannt"
+            }
+            textSize = 16f
+            setPadding(0, 0, 0, 8)
         })
         
         // Troubleshooting Section Header
