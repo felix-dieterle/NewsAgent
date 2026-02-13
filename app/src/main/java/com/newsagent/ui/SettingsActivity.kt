@@ -878,27 +878,28 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val originalKey = prefs.getString("news_api_key", "")
         
-        val result = try {
+        try {
             // Save temp API key synchronously
             prefs.edit().putString("news_api_key", apiKey).commit()
             
             val newsRepository = com.newsagent.services.NewsRepository(this@SettingsActivity)
             val articles = newsRepository.fetchTopHeadlines()
             
-            if (articles.isNotEmpty()) {
+            val result = if (articles.isNotEmpty()) {
                 "✅ Erfolgreich (${articles.size} Artikel)"
             } else {
                 "⚠️ Keine Artikel gefunden"
             }
-        } catch (e: Exception) {
-            Logger.e("SettingsActivity", "NewsAPI test failed", e)
-            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
-        } finally {
+            
             // Restore original key synchronously
             prefs.edit().putString("news_api_key", originalKey).commit()
+            result
+        } catch (e: Exception) {
+            // Restore original key synchronously on error
+            prefs.edit().putString("news_api_key", originalKey).commit()
+            Logger.e("SettingsActivity", "NewsAPI test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
         }
-        
-        result
     }
     
     /**
@@ -908,27 +909,28 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val originalKey = prefs.getString("gnews_api_token", "")
         
-        val result = try {
+        try {
             // Save temp API key synchronously
             prefs.edit().putString("gnews_api_token", apiKey).commit()
             
             val newsRepository = com.newsagent.services.NewsRepository(this@SettingsActivity)
             val articles = newsRepository.fetchTopHeadlinesFree()
             
-            if (articles.isNotEmpty()) {
+            val result = if (articles.isNotEmpty()) {
                 "✅ Erfolgreich (${articles.size} Artikel)"
             } else {
                 "⚠️ Keine Artikel gefunden"
             }
-        } catch (e: Exception) {
-            Logger.e("SettingsActivity", "GNews test failed", e)
-            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
-        } finally {
+            
             // Restore original key synchronously
             prefs.edit().putString("gnews_api_token", originalKey).commit()
+            result
+        } catch (e: Exception) {
+            // Restore original key synchronously on error
+            prefs.edit().putString("gnews_api_token", originalKey).commit()
+            Logger.e("SettingsActivity", "GNews test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
         }
-        
-        result
     }
     
     /**
@@ -938,7 +940,7 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
         val originalKey = prefs.getString("openrouter_api_key", "")
         
-        val result = try {
+        try {
             // Save temp API key synchronously
             prefs.edit().putString("openrouter_api_key", apiKey).commit()
             
@@ -958,20 +960,21 @@ class SettingsActivity : AppCompatActivity() {
             
             val summary = aiService.generateSummary(testArticle)
             
-            if (summary != null) {
+            val result = if (summary != null) {
                 "✅ Erfolgreich (AI antwortet)"
             } else {
                 "⚠️ Keine Antwort von AI"
             }
-        } catch (e: Exception) {
-            Logger.e("SettingsActivity", "OpenRouter test failed", e)
-            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
-        } finally {
+            
             // Restore original key synchronously
             prefs.edit().putString("openrouter_api_key", originalKey).commit()
+            result
+        } catch (e: Exception) {
+            // Restore original key synchronously on error
+            prefs.edit().putString("openrouter_api_key", originalKey).commit()
+            Logger.e("SettingsActivity", "OpenRouter test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
         }
-        
-        result
     }
     
     /**
@@ -982,7 +985,7 @@ class SettingsActivity : AppCompatActivity() {
         val originalKey = prefs.getString("google_api_key", "")
         val originalEngineId = prefs.getString("google_search_engine_id", "")
         
-        val result = try {
+        try {
             // Save temp API keys synchronously
             prefs.edit()
                 .putString("google_api_key", apiKey)
@@ -992,23 +995,27 @@ class SettingsActivity : AppCompatActivity() {
             val newsRepository = com.newsagent.services.NewsRepository(this@SettingsActivity)
             val articles = newsRepository.searchGoogleCustomSearch("news")
             
-            if (articles.isNotEmpty()) {
+            val result = if (articles.isNotEmpty()) {
                 "✅ Erfolgreich (${articles.size} Artikel)"
             } else {
                 "⚠️ Keine Artikel gefunden"
             }
-        } catch (e: Exception) {
-            Logger.e("SettingsActivity", "Google Custom Search test failed", e)
-            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
-        } finally {
+            
             // Restore original keys synchronously
             prefs.edit()
                 .putString("google_api_key", originalKey)
                 .putString("google_search_engine_id", originalEngineId)
                 .commit()
+            result
+        } catch (e: Exception) {
+            // Restore original keys synchronously on error
+            prefs.edit()
+                .putString("google_api_key", originalKey)
+                .putString("google_search_engine_id", originalEngineId)
+                .commit()
+            Logger.e("SettingsActivity", "Google Custom Search test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
         }
-        
-        result
     }
     
     override fun onSupportNavigateUp(): Boolean {
