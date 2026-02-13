@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var updateService: UpdateService
     
     private var updateDownloadReceiver: android.content.BroadcastReceiver? = null
+    private var updateProgressDialog: AlertDialog? = null
     
     private val searchThrottler = SearchThrottler.getInstance()
     private val articles = mutableListOf<NewsArticle>()
@@ -860,8 +861,8 @@ class MainActivity : AppCompatActivity() {
         val message = buildString {
             appendLine("Eine neue Version ist verfügbar!")
             appendLine()
-            appendLine("Aktuelle Version: ${updateInfo.currentVersion}")
-            appendLine("Neue Version: ${updateInfo.latestVersion}")
+            appendLine("Aktuelle Version: ${updateInfo.currentVersion} (Build ${updateInfo.currentVersionCode})")
+            appendLine("Neue Version: ${updateInfo.latestVersion} (Build ${updateInfo.latestVersionCode})")
             appendLine()
             if (updateInfo.releaseNotes.isNotBlank()) {
                 appendLine("Was ist neu:")
@@ -898,12 +899,39 @@ class MainActivity : AppCompatActivity() {
         try {
             Logger.i("MainActivity", "Starting update download")
             
-            // Show download started message
-            Toast.makeText(
-                this,
-                "Update wird heruntergeladen...",
-                Toast.LENGTH_LONG
-            ).show()
+            // Show progress dialog
+            val progressView = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(50, 40, 50, 40)
+                
+                // Progress bar
+                addView(android.widget.ProgressBar(this@MainActivity).apply {
+                    isIndeterminate = true
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                })
+                
+                // Status text
+                addView(android.widget.TextView(this@MainActivity).apply {
+                    text = "Update wird heruntergeladen...\nBitte warten Sie."
+                    textAlignment = android.view.View.TEXT_ALIGNMENT_CENTER
+                    setPadding(0, 30, 0, 0)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                })
+            }
+            
+            updateProgressDialog = AlertDialog.Builder(this)
+                .setTitle("Update Download")
+                .setView(progressView)
+                .setCancelable(false)
+                .create()
+            
+            updateProgressDialog?.show()
             
             // Start download
             val downloadId = updateService.downloadAndInstallUpdate(downloadUrl)
@@ -913,6 +941,11 @@ class MainActivity : AppCompatActivity() {
             
         } catch (e: Exception) {
             Logger.e("MainActivity", "Error downloading update", e)
+            
+            // Dismiss progress dialog on error
+            updateProgressDialog?.dismiss()
+            updateProgressDialog = null
+            
             Toast.makeText(
                 this,
                 "Fehler beim Herunterladen des Updates: ${e.message}",
@@ -974,10 +1007,19 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 
                                 if (apkFile != null && apkFile.exists()) {
+                                    // Dismiss progress dialog
+                                    updateProgressDialog?.dismiss()
+                                    updateProgressDialog = null
+                                    
                                     // Install the APK
                                     updateService.installApk(apkFile)
                                 } else {
                                     Logger.e("MainActivity", "Downloaded APK file not found or URI not accessible")
+                                    
+                                    // Dismiss progress dialog
+                                    updateProgressDialog?.dismiss()
+                                    updateProgressDialog = null
+                                    
                                     Toast.makeText(
                                         this@MainActivity,
                                         "Update-Datei nicht gefunden",
@@ -986,6 +1028,11 @@ class MainActivity : AppCompatActivity() {
                                 }
                             } else {
                                 Logger.e("MainActivity", "Could not get URI for downloaded file")
+                                
+                                // Dismiss progress dialog
+                                updateProgressDialog?.dismiss()
+                                updateProgressDialog = null
+                                
                                 Toast.makeText(
                                     this@MainActivity,
                                     "Update-Datei nicht gefunden",
@@ -994,6 +1041,11 @@ class MainActivity : AppCompatActivity() {
                             }
                         } else {
                             Logger.e("MainActivity", "Download failed with status: $status")
+                            
+                            // Dismiss progress dialog
+                            updateProgressDialog?.dismiss()
+                            updateProgressDialog = null
+                            
                             Toast.makeText(
                                 this@MainActivity,
                                 "Update-Download fehlgeschlagen",
@@ -1023,6 +1075,10 @@ class MainActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
+        
+        // Clean up the progress dialog if still showing
+        updateProgressDialog?.dismiss()
+        updateProgressDialog = null
         
         // Clean up the download receiver if still registered
         updateDownloadReceiver?.let {
