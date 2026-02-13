@@ -54,7 +54,9 @@ class UpdateService(private val context: Context) {
     data class UpdateInfo(
         val isUpdateAvailable: Boolean,
         val currentVersion: String,
+        val currentVersionCode: Int,
         val latestVersion: String,
+        val latestVersionCode: Int,
         val releaseNotes: String,
         val downloadUrl: String?,
         val releaseUrl: String
@@ -80,18 +82,29 @@ class UpdateService(private val context: Context) {
                 return@withContext null
             }
             
-            // Get current version from package manager
-            val currentVersion = try {
+            // Get current version and version code from package manager
+            val (currentVersion, currentVersionCode) = try {
                 val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-                pInfo.versionName ?: "1.0"
+                val versionName = pInfo.versionName ?: "1.0"
+                val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    pInfo.longVersionCode.toInt()
+                } else {
+                    @Suppress("DEPRECATION")
+                    pInfo.versionCode
+                }
+                Pair(versionName, versionCode)
             } catch (e: Exception) {
                 Logger.e("UpdateService", "Error getting version info", e)
-                "1.0"
+                Pair("1.0", 1)
             }
             
             val latestVersion = release.tag_name.removePrefix("v")
             
-            Logger.i("UpdateService", "Current version: $currentVersion, Latest version: $latestVersion")
+            // Extract version code from release name or tag
+            // Expected format: "v1.0" or "v1.0-2" or "1.0 (2)" where 2 is the build number
+            val latestVersionCode = extractVersionCode(release.tag_name, release.name)
+            
+            Logger.i("UpdateService", "Current version: $currentVersion ($currentVersionCode), Latest version: $latestVersion ($latestVersionCode)")
             
             // Check if user has skipped this version
             val skippedVersion = prefs.getString(PREF_KEY_SKIP_VERSION, null)
@@ -100,14 +113,23 @@ class UpdateService(private val context: Context) {
                 return@withContext UpdateInfo(
                     isUpdateAvailable = false,
                     currentVersion = currentVersion,
+                    currentVersionCode = currentVersionCode,
                     latestVersion = latestVersion,
+                    latestVersionCode = latestVersionCode,
                     releaseNotes = release.body,
                     downloadUrl = null,
                     releaseUrl = release.html_url
                 )
             }
             
-            val isNewer = compareVersions(latestVersion, currentVersion) > 0
+            // Compare versions: check version code first (more reliable), then version name
+            val isNewer = if (latestVersionCode > 0 && currentVersionCode > 0) {
+                // If both have version codes, use them for comparison
+                latestVersionCode > currentVersionCode
+            } else {
+                // Fallback to semantic version comparison
+                compareVersions(latestVersion, currentVersion) > 0
+            }
             
             // Find APK asset
             val apkAsset = release.assets.find { 
@@ -117,7 +139,9 @@ class UpdateService(private val context: Context) {
             UpdateInfo(
                 isUpdateAvailable = isNewer,
                 currentVersion = currentVersion,
+                currentVersionCode = currentVersionCode,
                 latestVersion = latestVersion,
+                latestVersionCode = latestVersionCode,
                 releaseNotes = release.body,
                 downloadUrl = apkAsset?.browser_download_url,
                 releaseUrl = release.html_url
@@ -233,6 +257,34 @@ class UpdateService(private val context: Context) {
         }
         
         context.startActivity(intent)
+    }
+    
+    /**
+     * Extract version code (build number) from tag name or release name
+     * Supports formats like: "v1.0-2", "1.0.1-2", "v1.0_2"
+     * Requires at least major.minor version format to avoid date confusion
+     * @param tagName The Git tag name
+     * @param releaseName The release name/title
+     * @return The extracted version code, or 0 if not found
+     */
+    private fun extractVersionCode(tagName: String, releaseName: String): Int {
+        // Try to extract from tag name first (e.g., "v1.0-2" or "v1.0.1_2")
+        // Pattern requires at least major.minor format to avoid matching dates
+        val tagPattern = Regex("""v?\d+\.\d+(?:\.\d+)*[-_](\d+)$""")
+        tagPattern.find(tagName)?.groupValues?.get(1)?.toIntOrNull()?.let {
+            Logger.d("UpdateService", "Extracted version code $it from tag: $tagName")
+            return it
+        }
+        
+        // Try to extract from release name (e.g., "Version 1.0 (Build 2)" or "1.0 (2)" at end)
+        val namePattern = Regex("""\((?:Build\s+)?(\d+)\)\s*$""", RegexOption.IGNORE_CASE)
+        namePattern.find(releaseName)?.groupValues?.get(1)?.toIntOrNull()?.let {
+            Logger.d("UpdateService", "Extracted version code $it from name: $releaseName")
+            return it
+        }
+        
+        Logger.d("UpdateService", "No version code found in tag '$tagName' or name '$releaseName'")
+        return 0
     }
     
     /**
