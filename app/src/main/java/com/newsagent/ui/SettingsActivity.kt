@@ -21,6 +21,13 @@ import java.io.File
  */
 class SettingsActivity : AppCompatActivity() {
     
+    companion object {
+        /**
+         * Maximum length for error messages displayed in API test results
+         */
+        private const val ERROR_MESSAGE_MAX_LENGTH = 50
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -130,7 +137,7 @@ class SettingsActivity : AppCompatActivity() {
         
         // Google Custom Search Engine ID
         layout.addView(TextView(this).apply {
-            text = "Google Custom Search Engine ID"
+            text = "Google Custom Search Engine ID (cx)"
             textSize = 18f
             setPadding(0, 8, 0, 8)
         })
@@ -142,7 +149,7 @@ class SettingsActivity : AppCompatActivity() {
         layout.addView(googleSearchEngineIdInput)
         
         layout.addView(TextView(this).apply {
-            text = "Programmable Search Engine ID - https://programmablesearchengine.google.com/"
+            text = "Programmable Search Engine ID - https://programmablesearchengine.google.com/\n\nHinweis: Google Custom Search API benötigt BEIDE Felder (API Key + Engine ID). Alternativ können Sie SerpApi verwenden, das nur einen Key benötigt."
             textSize = 12f
             setTextColor(0xFF666666.toInt())
             setPadding(0, 4, 0, 16)
@@ -294,6 +301,15 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(0, 8, 0, 0)
             setOnClickListener {
                 shareLogs()
+            }
+        })
+        
+        // Test All APIs Button
+        layout.addView(Button(this).apply {
+            text = "Alle APIs testen"
+            setPadding(0, 8, 0, 0)
+            setOnClickListener {
+                testAllApis()
             }
         })
         
@@ -739,6 +755,267 @@ class SettingsActivity : AppCompatActivity() {
                     .setNegativeButton("Schließen", null)
                     .show()
             }
+        }
+    }
+    
+    /**
+     * Test all configured APIs
+     */
+    private fun testAllApis() {
+        Logger.d("SettingsActivity", "Testing all APIs")
+        
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+        
+        // Get all API keys
+        val newsApiKey = prefs.getString("news_api_key", "") ?: ""
+        val gnewsApiKey = prefs.getString("gnews_api_token", "") ?: ""
+        val openRouterKey = prefs.getString("openrouter_api_key", "") ?: ""
+        val googleApiKey = prefs.getString("google_api_key", "") ?: ""
+        val googleSearchEngineId = prefs.getString("google_search_engine_id", "") ?: ""
+        
+        // Show loading dialog
+        val loadingDialog = AlertDialog.Builder(this)
+            .setTitle("APIs werden getestet...")
+            .setMessage("Teste alle konfigurierten APIs...\n\nBitte warten Sie.")
+            .setCancelable(false)
+            .show()
+        
+        // Test APIs in background
+        lifecycleScope.launch {
+            val results = mutableListOf<String>()
+            
+            try {
+                // Test NewsAPI
+                if (newsApiKey.isNotEmpty()) {
+                    val newsApiResult = testNewsApi(newsApiKey)
+                    results.add("NewsAPI.org: $newsApiResult")
+                } else {
+                    results.add("NewsAPI.org: ⚪ Kein API-Key konfiguriert")
+                }
+                
+                // Test GNews
+                if (gnewsApiKey.isNotEmpty()) {
+                    val gnewsResult = testGNewsApi(gnewsApiKey)
+                    results.add("GNews.io: $gnewsResult")
+                } else {
+                    results.add("GNews.io: ⚪ Kein API-Key konfiguriert")
+                }
+                
+                // Test OpenRouter (AI)
+                if (openRouterKey.isNotEmpty()) {
+                    val aiResult = testOpenRouterApi(openRouterKey)
+                    results.add("OpenRouter AI: $aiResult")
+                } else {
+                    results.add("OpenRouter AI: ⚪ Kein API-Key konfiguriert")
+                }
+                
+                // Test Google Custom Search
+                if (googleApiKey.isNotEmpty() && googleSearchEngineId.isNotEmpty()) {
+                    val googleResult = testGoogleCustomSearchApi(googleApiKey, googleSearchEngineId)
+                    results.add("Google Custom Search: $googleResult")
+                } else if (googleApiKey.isEmpty() && googleSearchEngineId.isEmpty()) {
+                    results.add("Google Custom Search: ⚪ Kein API-Key konfiguriert")
+                } else if (googleApiKey.isEmpty()) {
+                    results.add("Google Custom Search: ⚠️ API-Key fehlt")
+                } else {
+                    results.add("Google Custom Search: ⚠️ Search Engine ID fehlt")
+                }
+                
+                loadingDialog.dismiss()
+                
+                // Show results dialog
+                val scrollView = ScrollView(this@SettingsActivity)
+                val textView = TextView(this@SettingsActivity).apply {
+                    text = buildString {
+                        appendLine("API Test Ergebnisse")
+                        appendLine("═══════════════════════════════")
+                        appendLine()
+                        results.forEach { result ->
+                            appendLine(result)
+                            appendLine()
+                        }
+                        appendLine("═══════════════════════════════")
+                        appendLine()
+                        appendLine("✅ = Erfolgreich")
+                        appendLine("❌ = Fehler")
+                        appendLine("⚠️ = Warnung/Teilweise konfiguriert")
+                        appendLine("⚪ = Nicht konfiguriert")
+                    }
+                    setPadding(32, 32, 32, 32)
+                    textSize = 14f
+                    setTextIsSelectable(true)
+                }
+                scrollView.addView(textView)
+                
+                AlertDialog.Builder(this@SettingsActivity)
+                    .setTitle("API Test Ergebnisse")
+                    .setView(scrollView)
+                    .setPositiveButton("Schließen", null)
+                    .setNeutralButton("Logs anzeigen") { _, _ ->
+                        showLogs()
+                    }
+                    .show()
+                    
+            } catch (e: Exception) {
+                Logger.e("SettingsActivity", "Error testing APIs", e)
+                loadingDialog.dismiss()
+                AlertDialog.Builder(this@SettingsActivity)
+                    .setTitle("❌ Fehler beim Testen")
+                    .setMessage("Fehler: ${e.message}\n\nÜberprüfen Sie die Logs für Details.")
+                    .setPositiveButton("Logs anzeigen") { _, _ ->
+                        showLogs()
+                    }
+                    .setNegativeButton("Schließen", null)
+                    .show()
+            }
+        }
+    }
+    
+    /**
+     * Test NewsAPI.org API
+     */
+    private suspend fun testNewsApi(apiKey: String): String = withContext(Dispatchers.IO) {
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+        val originalKey = prefs.getString("news_api_key", "")
+        
+        try {
+            // Save temp API key synchronously
+            prefs.edit().putString("news_api_key", apiKey).commit()
+            
+            val newsRepository = com.newsagent.services.NewsRepository(this@SettingsActivity)
+            val articles = newsRepository.fetchTopHeadlines()
+            
+            val result = if (articles.isNotEmpty()) {
+                "✅ Erfolgreich (${articles.size} Artikel)"
+            } else {
+                "⚠️ Keine Artikel gefunden"
+            }
+            
+            // Restore original key synchronously
+            prefs.edit().putString("news_api_key", originalKey).commit()
+            result
+        } catch (e: Exception) {
+            // Restore original key synchronously on error
+            prefs.edit().putString("news_api_key", originalKey).commit()
+            Logger.e("SettingsActivity", "NewsAPI test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
+        }
+    }
+    
+    /**
+     * Test GNews.io API
+     */
+    private suspend fun testGNewsApi(apiKey: String): String = withContext(Dispatchers.IO) {
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+        val originalKey = prefs.getString("gnews_api_token", "")
+        
+        try {
+            // Save temp API key synchronously
+            prefs.edit().putString("gnews_api_token", apiKey).commit()
+            
+            val newsRepository = com.newsagent.services.NewsRepository(this@SettingsActivity)
+            val articles = newsRepository.fetchTopHeadlinesFree()
+            
+            val result = if (articles.isNotEmpty()) {
+                "✅ Erfolgreich (${articles.size} Artikel)"
+            } else {
+                "⚠️ Keine Artikel gefunden"
+            }
+            
+            // Restore original key synchronously
+            prefs.edit().putString("gnews_api_token", originalKey).commit()
+            result
+        } catch (e: Exception) {
+            // Restore original key synchronously on error
+            prefs.edit().putString("gnews_api_token", originalKey).commit()
+            Logger.e("SettingsActivity", "GNews test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
+        }
+    }
+    
+    /**
+     * Test OpenRouter AI API
+     */
+    private suspend fun testOpenRouterApi(apiKey: String): String = withContext(Dispatchers.IO) {
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+        val originalKey = prefs.getString("openrouter_api_key", "")
+        
+        try {
+            // Save temp API key synchronously
+            prefs.edit().putString("openrouter_api_key", apiKey).commit()
+            
+            val aiService = com.newsagent.services.AiSummaryService(this@SettingsActivity)
+            
+            // Create a test article with unique URL to avoid cache hits
+            val testArticle = com.newsagent.models.NewsArticle(
+                id = "test",
+                title = "Test Article",
+                description = "This is a test article to verify API connectivity",
+                content = "Test content for API verification",
+                url = "https://example.com/test-${System.currentTimeMillis()}",
+                source = "Test",
+                publishedAt = "",
+                imageUrl = null,
+                author = null
+            )
+            
+            val summary = aiService.generateSummary(testArticle)
+            
+            val result = if (summary != null) {
+                "✅ Erfolgreich (AI antwortet)"
+            } else {
+                "⚠️ Keine Antwort von AI"
+            }
+            
+            // Restore original key synchronously
+            prefs.edit().putString("openrouter_api_key", originalKey).commit()
+            result
+        } catch (e: Exception) {
+            // Restore original key synchronously on error
+            prefs.edit().putString("openrouter_api_key", originalKey).commit()
+            Logger.e("SettingsActivity", "OpenRouter test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
+        }
+    }
+    
+    /**
+     * Test Google Custom Search API
+     */
+    private suspend fun testGoogleCustomSearchApi(apiKey: String, searchEngineId: String): String = withContext(Dispatchers.IO) {
+        val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
+        val originalKey = prefs.getString("google_api_key", "")
+        val originalEngineId = prefs.getString("google_search_engine_id", "")
+        
+        try {
+            // Save temp API keys synchronously
+            prefs.edit()
+                .putString("google_api_key", apiKey)
+                .putString("google_search_engine_id", searchEngineId)
+                .commit()
+            
+            val newsRepository = com.newsagent.services.NewsRepository(this@SettingsActivity)
+            val articles = newsRepository.searchGoogleCustomSearch("news")
+            
+            val result = if (articles.isNotEmpty()) {
+                "✅ Erfolgreich (${articles.size} Artikel)"
+            } else {
+                "⚠️ Keine Artikel gefunden"
+            }
+            
+            // Restore original keys synchronously
+            prefs.edit()
+                .putString("google_api_key", originalKey)
+                .putString("google_search_engine_id", originalEngineId)
+                .commit()
+            result
+        } catch (e: Exception) {
+            // Restore original keys synchronously on error
+            prefs.edit()
+                .putString("google_api_key", originalKey)
+                .putString("google_search_engine_id", originalEngineId)
+                .commit()
+            Logger.e("SettingsActivity", "Google Custom Search test failed", e)
+            "❌ Fehler: ${e.message?.take(ERROR_MESSAGE_MAX_LENGTH)}"
         }
     }
     
