@@ -951,11 +951,12 @@ class SettingsActivity : AppCompatActivity() {
                 id = "test",
                 title = "Test Article",
                 description = "This is a test article to verify API connectivity",
+                content = "Test content for API verification",
                 url = "https://example.com/test-${System.currentTimeMillis()}",
-                imageUrl = null,
-                publishedAt = "",
                 source = "Test",
-                content = "Test content for API verification"
+                publishedAt = "",
+                imageUrl = null,
+                author = null
             )
             
             val summary = aiService.generateSummary(testArticle)
