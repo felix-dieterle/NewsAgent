@@ -38,7 +38,7 @@
 │    └─────────┬───────────┘                                       │
 └──────────────┼────────────────────────────────────────────────────┘
                │
-               ├─── No Update ──► (Exit silently)
+               ├─── No Update ──► (Silent - no notification)
                │
                ├─── Update Available ──►
                │
