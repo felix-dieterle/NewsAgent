@@ -195,6 +195,7 @@ class MainActivity : AppCompatActivity() {
         menu?.add(0, 1, 0, "Einstellungen")
         menu?.add(0, 2, 0, "Kostenlose Suche")
         menu?.add(0, 4, 0, "RSS Nachrichten")
+        menu?.add(0, 7, 0, "Alle als ungelesen markieren")
         menu?.add(0, 6, 0, "ℹ️ Info & Hilfe")
         
         // Add rate limit indicators menu item
@@ -261,8 +262,22 @@ class MainActivity : AppCompatActivity() {
                 showInfoDialog()
                 true
             }
+            7 -> {
+                markAllAsUnread()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+    
+    private fun markAllAsUnread() {
+        articles.forEach { it.isRead = false }
+        adapter.notifyDataSetChanged()
+        Toast.makeText(
+            this,
+            "${articles.size} Artikel als ungelesen markiert",
+            Toast.LENGTH_SHORT
+        ).show()
     }
     
     private fun createRateLimitIndicatorsView(): android.view.View {

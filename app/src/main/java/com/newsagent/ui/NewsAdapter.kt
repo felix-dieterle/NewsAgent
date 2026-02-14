@@ -61,7 +61,28 @@ class NewsAdapter(
     override fun onBindViewHolder(holder: NewsViewHolder, position: Int) {
         val article = articles[position]
         
-        holder.title.text = article.title
+        // Add category prefix and read indicator to title
+        val titlePrefix = buildString {
+            if (article.isRead) {
+                append("✓ ")  // Checkmark for read articles
+            }
+            article.category?.let { category ->
+                append("[$category] ")
+            }
+        }
+        holder.title.text = titlePrefix + article.title
+        
+        // Dim read articles
+        if (article.isRead) {
+            holder.title.alpha = 0.6f
+            holder.source.alpha = 0.6f
+            holder.credibility.alpha = 0.6f
+        } else {
+            holder.title.alpha = 1.0f
+            holder.source.alpha = 1.0f
+            holder.credibility.alpha = 1.0f
+        }
+        
         holder.source.text = "${article.source} • ${article.publishedAt}"
         
         val credibilityText = article.credibilityScore?.let { score ->
