@@ -57,9 +57,13 @@ class RssFeedParser {
                 factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
                 factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
             } catch (e: Exception) {
-                // Critical security features failed - this is a serious issue
+                // CRITICAL: Failed to set XXE protection features
+                // We continue parsing because:
+                // 1. RSS feeds are from hardcoded, trusted sources (Tagesschau, Heise, Spiegel)
+                // 2. Failing here would break all RSS functionality
+                // 3. Basic property-based protections (below) still apply
+                // However, this is logged as critical for monitoring
                 Log.e("RssFeedParser", "CRITICAL: Failed to set XXE protection features for $sourceName", e)
-                // Continue, but with additional safety measures below
             }
             
             // These settings don't throw exceptions, apply them unconditionally
@@ -88,7 +92,9 @@ class RssFeedParser {
                     val title = getElementText(element, "title") ?: continue
                     val description = getElementText(element, "description")
                     val link = getElementText(element, "link") ?: continue
-                    // Try RSS 2.0 pubDate first, then fall back to Dublin Core (dc:date) for RSS 1.0/RDF
+                    // Try RSS 2.0 pubDate first, then fall back to Dublin Core date (dc:date) for RSS 1.0/RDF
+                    // Dublin Core (dc:) is a metadata standard commonly used in RSS 1.0 feeds
+                    // The dc: prefix is resolved via the namespace declaration in the feed's XML
                     val pubDate = getElementText(element, "pubDate") ?: getElementText(element, "dc:date")
                     
                     articles.add(
