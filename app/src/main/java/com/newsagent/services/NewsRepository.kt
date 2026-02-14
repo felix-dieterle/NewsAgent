@@ -436,12 +436,15 @@ class NewsRepository(private val context: Context) {
             val parser = RssFeedParser()
             val allArticles = mutableListOf<NewsArticle>()
             val httpClient = OkHttpClient.Builder()
-                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
                 .build()
             
             var successCount = 0
             var failCount = 0
+            val failureDetails = mutableListOf<String>()
             
             // Fetch from multiple RSS feeds
             for ((sourceName, feedUrl) in RssFeedParser.GERMAN_RSS_FEEDS) {
@@ -449,36 +452,63 @@ class NewsRepository(private val context: Context) {
                     Logger.d("NewsRepository", "Fetching from RSS source: $sourceName ($feedUrl)")
                     val request = okhttp3.Request.Builder()
                         .url(feedUrl)
+                        .addHeader("User-Agent", "NewsAgent/1.0 (Android News Aggregator)")
                         .build()
                     
                     val response = httpClient.newCall(request).execute()
                     if (response.isSuccessful) {
-                        val xmlContent = response.body?.string() ?: continue
+                        val xmlContent = response.body?.string()
+                        if (xmlContent.isNullOrEmpty()) {
+                            failCount++
+                            val msg = "$sourceName: Empty response body"
+                            failureDetails.add(msg)
+                            Logger.w("NewsRepository", "⚠️ $msg")
+                            continue
+                        }
+                        
+                        Logger.d("NewsRepository", "$sourceName: Received ${xmlContent.length} bytes, parsing...")
                         val rssArticles = parser.parseRssContent(xmlContent, sourceName)
-                        val newsArticles = rssArticles.map { convertFromRssArticle(it) }
-                        allArticles.addAll(newsArticles)
-                        successCount++
-                        Logger.i("NewsRepository", "✅ $sourceName: ${newsArticles.size} articles fetched")
+                        
+                        if (rssArticles.isEmpty()) {
+                            failCount++
+                            val msg = "$sourceName: No articles parsed from ${xmlContent.length} bytes of XML"
+                            failureDetails.add(msg)
+                            Logger.w("NewsRepository", "⚠️ $msg")
+                            Logger.d("NewsRepository", "XML preview: ${xmlContent.take(500)}")
+                        } else {
+                            val newsArticles = rssArticles.map { convertFromRssArticle(it) }
+                            allArticles.addAll(newsArticles)
+                            successCount++
+                            Logger.i("NewsRepository", "✅ $sourceName: ${newsArticles.size} articles fetched successfully")
+                        }
                     } else {
                         failCount++
-                        Logger.w("NewsRepository", "⚠️ $sourceName: Failed (${response.code})")
+                        val msg = "$sourceName: HTTP ${response.code} - ${response.message}"
+                        failureDetails.add(msg)
+                        Logger.w("NewsRepository", "⚠️ $msg")
                     }
                 } catch (e: Exception) {
                     failCount++
-                    Logger.e("NewsRepository", "❌ $sourceName: Exception - ${e.message}", e)
+                    val msg = "$sourceName: ${e.javaClass.simpleName} - ${e.message}"
+                    failureDetails.add(msg)
+                    Logger.e("NewsRepository", "❌ $msg", e)
                 }
             }
             
             Logger.i("NewsRepository", "RSS fetch complete: $successCount succeeded, $failCount failed (Total articles: ${allArticles.size})")
             
             if (allArticles.isEmpty()) {
-                Logger.w("NewsRepository", "⚠️ No RSS articles fetched - alle Quellen haben fehlgeschlagen")
-                Logger.i("NewsRepository", "➡️ Überprüfen Sie Ihre Internetverbindung")
+                Logger.w("NewsRepository", "⚠️ No RSS articles fetched - alle ${RssFeedParser.GERMAN_RSS_FEEDS.size} Quellen haben fehlgeschlagen")
+                Logger.w("NewsRepository", "Fehlerdetails:")
+                failureDetails.forEach { detail ->
+                    Logger.w("NewsRepository", "  - $detail")
+                }
+                Logger.i("NewsRepository", "➡️ Überprüfen Sie Ihre Internetverbindung und Firewall-Einstellungen")
             }
             
             val maxArticles = prefs.getInt("max_articles", 10)
             val limitedArticles = allArticles.take(maxArticles)
-            Logger.i("NewsRepository", "Returning ${limitedArticles.size} RSS articles (limited from ${allArticles.size})")
+            Logger.i("NewsRepository", "Returning ${limitedArticles.size} RSS articles (limited from ${allArticles.size} total)")
             limitedArticles
         } catch (e: Exception) {
             Logger.e("NewsRepository", "❌ Exception fetching RSS news", e)

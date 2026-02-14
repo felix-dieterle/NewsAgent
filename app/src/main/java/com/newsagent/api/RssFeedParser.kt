@@ -37,20 +37,30 @@ class RssFeedParser {
     
     /**
      * Parse RSS XML content
+     * Supports both RSS 2.0 (<item>) and RSS 1.0/RDF (<item>) formats
      */
     private fun parseRssXml(xmlContent: String, sourceName: String): List<RssArticle> {
         val articles = mutableListOf<RssArticle>()
         
         try {
             val factory = DocumentBuilderFactory.newInstance()
+            factory.isNamespaceAware = true  // Enable namespace awareness for RDF
             
             // Security: Disable XXE (XML External Entity) attacks
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-            factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
-            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-            factory.isXIncludeAware = false
-            factory.isExpandEntityReferences = false
+            // Note: We allow DOCTYPE declarations (needed for RSS feeds) but disable external entities
+            try {
+                // Don't disallow DOCTYPE - RSS feeds need it
+                // factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+                
+                // But disable external entities to prevent XXE attacks
+                factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+                factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+                factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+                factory.isXIncludeAware = false
+                factory.isExpandEntityReferences = false
+            } catch (e: Exception) {
+                Log.w("RssFeedParser", "Could not set some security features for $sourceName", e)
+            }
             
             val builder = factory.newDocumentBuilder()
             val inputSource = InputSource(StringReader(xmlContent))
@@ -58,7 +68,12 @@ class RssFeedParser {
             
             doc.documentElement.normalize()
             
+            Log.d("RssFeedParser", "Parsing $sourceName: Root element = ${doc.documentElement.tagName}")
+            
+            // Try to find items - works for both RSS 2.0 and RSS 1.0/RDF
             val itemList = doc.getElementsByTagName("item")
+            
+            Log.d("RssFeedParser", "Found ${itemList.length} items in $sourceName")
             
             for (i in 0 until itemList.length) {
                 val itemNode = itemList.item(i)
@@ -69,7 +84,7 @@ class RssFeedParser {
                     val title = getElementText(element, "title") ?: continue
                     val description = getElementText(element, "description")
                     val link = getElementText(element, "link") ?: continue
-                    val pubDate = getElementText(element, "pubDate")
+                    val pubDate = getElementText(element, "pubDate") ?: getElementText(element, "dc:date")
                     
                     articles.add(
                         RssArticle(
@@ -82,8 +97,11 @@ class RssFeedParser {
                     )
                 }
             }
+            
+            Log.d("RssFeedParser", "Successfully parsed ${articles.size} articles from $sourceName")
         } catch (e: Exception) {
             Log.e("RssFeedParser", "Error in parseRssXml for $sourceName", e)
+            e.printStackTrace()
         }
         
         return articles
