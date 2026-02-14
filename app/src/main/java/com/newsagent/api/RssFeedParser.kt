@@ -52,18 +52,19 @@ class RssFeedParser {
                 // Don't disallow DOCTYPE - RSS feeds need it
                 // factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
                 
-                // But disable external entities to prevent XXE attacks
+                // Disable external entities to prevent XXE attacks
                 factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
                 factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
                 factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-                factory.isXIncludeAware = false
-                factory.isExpandEntityReferences = false
-                Log.d("RssFeedParser", "XXE protection features enabled for $sourceName")
             } catch (e: Exception) {
-                // Log which features failed - this is important for security
-                Log.e("RssFeedParser", "WARNING: Failed to set XXE protection features for $sourceName - parser may be vulnerable", e)
-                // Continue anyway as basic features like isXIncludeAware are always available
+                // Critical security features failed - this is a serious issue
+                Log.e("RssFeedParser", "CRITICAL: Failed to set XXE protection features for $sourceName", e)
+                // Continue, but with additional safety measures below
             }
+            
+            // These settings don't throw exceptions, apply them unconditionally
+            factory.isXIncludeAware = false
+            factory.isExpandEntityReferences = false
             
             val builder = factory.newDocumentBuilder()
             val inputSource = InputSource(StringReader(xmlContent))
