@@ -821,33 +821,21 @@ class MainActivity : AppCompatActivity() {
             val timeUntilNextCheck = updateService.getTimeUntilNextCheck()
             val minutesRemaining = (timeUntilNextCheck / 60000).toInt()
             Logger.d("MainActivity", "Skipping update check - too soon since last check ($minutesRemaining minutes remaining)")
-            Toast.makeText(
-                this@MainActivity,
-                "Update-Prüfung übersprungen. Nächste Prüfung in $minutesRemaining Minuten.",
-                Toast.LENGTH_SHORT
-            ).show()
+            // Silent skip - no need to notify user
             return
         }
         
         lifecycleScope.launch {
             try {
-                // Show user that update check is starting
-                Toast.makeText(
-                    this@MainActivity,
-                    "Suche nach App-Updates...",
-                    Toast.LENGTH_SHORT
-                ).show()
+                // Silent check - no toast message needed
+                Logger.d("MainActivity", "Checking for app updates in background...")
                 
                 val updateInfo = updateService.checkForUpdate()
                 updateService.updateLastCheckTime()
                 
                 if (updateInfo == null) {
-                    Logger.d("MainActivity", "Could not check for updates")
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Update-Prüfung fehlgeschlagen",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Logger.w("MainActivity", "Could not check for updates - network or API issue")
+                    // Silent failure - user doesn't need to know about background check failures
                     return@launch
                 }
                 
@@ -856,11 +844,7 @@ class MainActivity : AppCompatActivity() {
                     showUpdateDialog(updateInfo)
                 } else {
                     Logger.d("MainActivity", "No update available. Current: ${updateInfo.currentVersion} (${updateInfo.currentVersionCode})")
-                    Toast.makeText(
-                        this@MainActivity,
-                        "App ist auf dem neuesten Stand\nVersion: ${updateInfo.currentVersion} (Build ${updateInfo.currentVersionCode})",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // Silent success - no need to notify user when app is up to date
                 }
             } catch (e: Exception) {
                 Logger.e("MainActivity", "Error checking for updates", e)
