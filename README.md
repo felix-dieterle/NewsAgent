@@ -34,16 +34,25 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
   - **Artikel-Deduplizierung**: Entfernt Duplikate vor teurer AI-Verarbeitung
   - **AI-Modus**: Umschaltbar zwischen Kosten-Optimierung und Qualitäts-Maximierung
   - Details: Siehe [INTELLIGENT_SEARCH_OPTIMIZATION.md](INTELLIGENT_SEARCH_OPTIMIZATION.md)
+- **📂 Kategorie- und Stichwort-Filter** (NEU):
+  - **Kategorien**: Filtern nach Technologie, Politik, Sport, Wirtschaft, etc.
+  - **Stichwörter**: Benutzerdefinierte Keywords für relevante Artikel
+  - **Ungelesen-Filter**: Nur ungelesene Artikel anzeigen
+  - **Intelligente Sortierung**: Nach Aktualität, Glaubwürdigkeit oder Relevanz
+  - **Automatische Kategorisierung**: KI-gestützte Kategoriezuweisung
+  - **Visuelle Indikatoren**: Kategorie-Tags und Lesemarkierungen in Artikelliste
+  - Details: Siehe [CATEGORY_FILTER_IMPLEMENTATION.md](CATEGORY_FILTER_IMPLEMENTATION.md)
 
 ## Architektur
 
 ### Komponenten
 
 #### 📁 Models (`models/`)
-- `NewsArticle.kt` - Datenmodell für Nachrichtenartikel
+- `NewsArticle.kt` - Datenmodell für Nachrichtenartikel (erweitert mit Kategorie, Tags, Lesestatus)
 - `NewsSummary.kt` - KI-generierte Zusammenfassungen
 - `CredibilityScore.kt` - Glaubwürdigkeitsbewertung
 - `NewsUpdateConfig.kt` - Konfigurationseinstellungen
+- `NewsFilterPreferences.kt` - Benutzer-Filterpräferenzen
 
 #### 🌐 API Interfaces (`api/`)
 - `NewsApi.kt` - Integration mit News API (newsapi.org)
@@ -66,12 +75,13 @@ Eine Android-App, die Sie in konfigurierbaren Intervallen über Nachrichten auf 
 - `utils/Logger.kt` - Umfassendes Logging-System
 - `utils/SearchThrottler.kt` - Such-Drosselung und Debouncing (NEU)
 - `utils/ArticleDeduplicator.kt` - Duplikat-Entfernung (NEU)
+- `utils/ArticleFilterHelper.kt` - Kategorie-Inferenz und Filter-Logik (NEU)
 
 #### 🎨 UI (`ui/`)
-- `MainActivity.kt` - Hauptansicht mit Nachrichtenliste
+- `MainActivity.kt` - Hauptansicht mit Nachrichtenliste und Filterung
 - `NewsDetailActivity.kt` - Detailansicht mit Zusammenfassung und Audio
-- `SettingsActivity.kt` - Einstellungen und Konfiguration
-- `NewsAdapter.kt` - RecyclerView Adapter
+- `SettingsActivity.kt` - Einstellungen, Konfiguration und Filter-Präferenzen
+- `NewsAdapter.kt` - RecyclerView Adapter mit Kategorie- und Lesemarkierungen
 
 ## Setup & Installation
 
