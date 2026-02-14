@@ -1,8 +1,9 @@
 name: Android Release
 
 # This workflow creates a release on every push to main.
-# To avoid duplicate version releases, increment versionCode/versionName 
-# in app/build.gradle.kts before merging to main.
+# The versionCode is automatically set to the GitHub run number to ensure
+# consistency between the APK manifest and the release tag/filename.
+# Only versionName needs to be updated manually in app/build.gradle.kts.
 
 on:
   push:
@@ -27,6 +28,14 @@ jobs:
         
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+      
+    - name: Update versionCode to match build number
+      run: |
+        # Update versionCode in build.gradle.kts to match GitHub run number
+        # This ensures the APK manifest matches the filename and tag
+        sed -i "s/versionCode = [0-9]\+/versionCode = ${{ github.run_number }}/" app/build.gradle.kts
+        echo "Updated versionCode to ${{ github.run_number }}"
+        grep "versionCode" app/build.gradle.kts
       
     - name: Decode Keystore (if provided)
       env:
