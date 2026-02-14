@@ -33,7 +33,7 @@ jobs:
       run: |
         # Update versionCode in build.gradle.kts to match GitHub run number
         # This ensures the APK manifest matches the filename and tag
-        sed -i "s/versionCode = [0-9]\+/versionCode = ${{ github.run_number }}/" app/build.gradle.kts
+        sed -i "s/versionCode = [0-9][0-9]*/versionCode = ${{ github.run_number }}/" app/build.gradle.kts
         echo "Updated versionCode to ${{ github.run_number }}"
         grep "versionCode" app/build.gradle.kts
       
