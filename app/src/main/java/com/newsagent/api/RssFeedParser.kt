@@ -101,7 +101,6 @@ class RssFeedParser {
             Log.d("RssFeedParser", "Successfully parsed ${articles.size} articles from $sourceName")
         } catch (e: Exception) {
             Log.e("RssFeedParser", "Error in parseRssXml for $sourceName", e)
-            e.printStackTrace()
         }
         
         return articles
