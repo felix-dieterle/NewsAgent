@@ -35,5 +35,8 @@ data class NewsArticle(
     
     var summary: NewsSummary? = null,
     var credibilityScore: CredibilityScore? = null,
-    var isFavorite: Boolean = false
+    var isFavorite: Boolean = false,
+    var isRead: Boolean = false,
+    var category: String? = null,
+    var tags: List<String> = emptyList()
 )

@@ -238,6 +238,112 @@ class SettingsActivity : AppCompatActivity() {
         }
         layout.addView(maxArticlesInput)
         
+        // Divider
+        layout.addView(View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                2
+            ).apply {
+                setMargins(0, 32, 0, 16)
+            }
+            setBackgroundColor(0xFFCCCCCC.toInt())
+        })
+        
+        // News Filtering Section Header
+        layout.addView(TextView(this).apply {
+            text = "Nachrichten-Filter"
+            textSize = 20f
+            setPadding(0, 8, 0, 16)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        })
+        
+        // Categories Selection
+        layout.addView(TextView(this).apply {
+            text = "Kategorien auswählen"
+            textSize = 18f
+            setPadding(0, 16, 0, 8)
+        })
+        
+        layout.addView(TextView(this).apply {
+            text = "Lassen Sie leer, um alle Kategorien anzuzeigen"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 8)
+        })
+        
+        val categoriesInput = EditText(this).apply {
+            hint = "z.B. Technologie, Politik, Sport (kommagetrennt)"
+            setText(prefs.getString("selected_categories", ""))
+            maxLines = 2
+        }
+        layout.addView(categoriesInput)
+        
+        layout.addView(TextView(this).apply {
+            text = "Verfügbare Kategorien: Allgemein, Technologie, Politik, Wirtschaft, Sport, Wissenschaft, Kultur, Umwelt"
+            textSize = 11f
+            setTextColor(0xFF888888.toInt())
+            setPadding(0, 4, 0, 16)
+        })
+        
+        // Keywords Selection
+        layout.addView(TextView(this).apply {
+            text = "Stichwörter / Keywords"
+            textSize = 18f
+            setPadding(0, 16, 0, 8)
+        })
+        
+        layout.addView(TextView(this).apply {
+            text = "Filter für wichtige Stichwörter in Artikeln"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 8)
+        })
+        
+        val keywordsInput = EditText(this).apply {
+            hint = "z.B. KI, Klima, Europa (kommagetrennt)"
+            setText(prefs.getString("filter_keywords", ""))
+            maxLines = 2
+        }
+        layout.addView(keywordsInput)
+        
+        // Show Only Unread Toggle
+        val showOnlyUnreadCheckbox = CheckBox(this).apply {
+            text = "Nur ungelesene Artikel anzeigen"
+            isChecked = prefs.getBoolean("show_only_unread", false)
+            setPadding(0, 8, 0, 0)
+        }
+        layout.addView(showOnlyUnreadCheckbox)
+        
+        // Sort Order Selection
+        layout.addView(TextView(this).apply {
+            text = "Sortierung"
+            textSize = 18f
+            setPadding(0, 16, 0, 8)
+        })
+        
+        val sortOrderSpinner = Spinner(this).apply {
+            val sortOptions = arrayOf("Neueste zuerst", "Nach Glaubwürdigkeit", "Nach Relevanz")
+            val adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_spinner_item, sortOptions)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setAdapter(adapter)
+            
+            // Set current selection
+            val currentSortOrder = prefs.getString("sort_order", "RECENT") ?: "RECENT"
+            setSelection(when (currentSortOrder) {
+                "CREDIBILITY" -> 1
+                "RELEVANCE" -> 2
+                else -> 0
+            })
+        }
+        layout.addView(sortOrderSpinner)
+        
+        layout.addView(TextView(this).apply {
+            text = "Wählen Sie, wie die Artikel sortiert werden sollen"
+            textSize = 12f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, 4, 0, 16)
+        })
+        
         // API Rate Limits Section
         layout.addView(View(this).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -360,6 +466,13 @@ class SettingsActivity : AppCompatActivity() {
                     2 -> "rss"
                     else -> "newsapi"
                 }
+                
+                val selectedSortOrder = when (sortOrderSpinner.selectedItemPosition) {
+                    1 -> "CREDIBILITY"
+                    2 -> "RELEVANCE"
+                    else -> "RECENT"
+                }
+                
                 saveSettings(
                     newsApiTokenInput.text.toString(),
                     aiApiTokenInput.text.toString(),
@@ -372,7 +485,11 @@ class SettingsActivity : AppCompatActivity() {
                     credibilityCheckbox.isChecked,
                     aiModeCheckbox.isChecked,
                     autoUpdateCheckbox.isChecked,
-                    maxArticlesInput.text.toString().toIntOrNull() ?: 10
+                    maxArticlesInput.text.toString().toIntOrNull() ?: 10,
+                    categoriesInput.text.toString(),
+                    keywordsInput.text.toString(),
+                    showOnlyUnreadCheckbox.isChecked,
+                    selectedSortOrder
                 )
             }
         })
@@ -564,7 +681,11 @@ class SettingsActivity : AppCompatActivity() {
         enableCredibilityCheck: Boolean,
         aiModeEnabled: Boolean,
         autoUpdateEnabled: Boolean,
-        maxArticles: Int
+        maxArticles: Int,
+        selectedCategories: String,
+        filterKeywords: String,
+        showOnlyUnread: Boolean,
+        sortOrder: String
     ) {
         Logger.d("SettingsActivity", "Saving settings...")
         val prefs = getSharedPreferences("newsagent_prefs", MODE_PRIVATE)
@@ -598,6 +719,10 @@ class SettingsActivity : AppCompatActivity() {
             putBoolean("ai_mode_enabled", aiModeEnabled)
             putBoolean("auto_update_enabled", autoUpdateEnabled)
             putInt("max_articles", maxArticles)
+            putString("selected_categories", selectedCategories)
+            putString("filter_keywords", filterKeywords)
+            putBoolean("show_only_unread", showOnlyUnread)
+            putString("sort_order", sortOrder)
             apply()
         }
         

@@ -5,6 +5,9 @@ import android.content.SharedPreferences
 import com.newsagent.api.*
 import com.newsagent.cache.CacheManager
 import com.newsagent.models.NewsArticle
+import com.newsagent.models.NewsFilterPreferences
+import com.newsagent.models.SortOrder
+import com.newsagent.utils.ArticleFilterHelper
 import com.newsagent.utils.Logger
 import com.newsagent.utils.RateLimiter
 import kotlinx.coroutines.Dispatchers
@@ -655,6 +658,101 @@ class NewsRepository(private val context: Context) {
             publishedAt = publishedAt,
             imageUrl = imageUrl,
             author = null
+        )
+    }
+    
+    /**
+     * Get filter preferences from SharedPreferences
+     */
+    fun getFilterPreferences(): NewsFilterPreferences {
+        val categoriesString = prefs.getString("selected_categories", "") ?: ""
+        val keywordsString = prefs.getString("filter_keywords", "") ?: ""
+        val showOnlyUnread = prefs.getBoolean("show_only_unread", false)
+        val sortOrderString = prefs.getString("sort_order", "RECENT") ?: "RECENT"
+        
+        val categories = if (categoriesString.isNotEmpty()) {
+            categoriesString.split(",").map { it.trim() }.toSet()
+        } else {
+            emptySet()
+        }
+        
+        val keywords = if (keywordsString.isNotEmpty()) {
+            keywordsString.split(",").map { it.trim() }.toSet()
+        } else {
+            emptySet()
+        }
+        
+        val sortOrder = try {
+            SortOrder.valueOf(sortOrderString)
+        } catch (e: Exception) {
+            SortOrder.RECENT
+        }
+        
+        return NewsFilterPreferences(
+            selectedCategories = categories,
+            keywords = keywords,
+            showOnlyUnread = showOnlyUnread,
+            sortBy = sortOrder
+        )
+    }
+    
+    /**
+     * Save filter preferences to SharedPreferences
+     */
+    fun saveFilterPreferences(preferences: NewsFilterPreferences) {
+        prefs.edit().apply {
+            putString("selected_categories", preferences.selectedCategories.joinToString(","))
+            putString("filter_keywords", preferences.keywords.joinToString(","))
+            putBoolean("show_only_unread", preferences.showOnlyUnread)
+            putString("sort_order", preferences.sortBy.name)
+            apply()
+        }
+    }
+    
+    /**
+     * Fetch top headlines with filtering and sorting applied
+     */
+    suspend fun fetchTopHeadlinesFiltered(): List<NewsArticle> = withContext(Dispatchers.IO) {
+        // Fetch articles from the selected source
+        val articles = fetchTopHeadlines()
+        
+        // Enrich articles with categories and tags if not already set
+        articles.forEach { article ->
+            if (article.category == null) {
+                article.category = ArticleFilterHelper.inferCategory(article)
+            }
+            if (article.tags.isEmpty()) {
+                article.tags = ArticleFilterHelper.extractTags(article)
+            }
+        }
+        
+        // Get filter preferences
+        val preferences = getFilterPreferences()
+        
+        // Apply filters
+        val filteredArticles = ArticleFilterHelper.filterArticles(articles, preferences)
+        
+        // Apply sorting
+        val sortedArticles = ArticleFilterHelper.sortArticles(filteredArticles, preferences.sortBy)
+        
+        Logger.i("NewsRepository", "Filtered ${articles.size} articles to ${sortedArticles.size} based on preferences")
+        
+        sortedArticles
+    }
+    
+    /**
+     * Get available categories for filtering
+     */
+    fun getAvailableCategories(): List<String> {
+        return listOf(
+            "Allgemein",
+            "Technologie",
+            "Politik",
+            "Wirtschaft",
+            "Sport",
+            "Wissenschaft",
+            "Kultur",
+            "Umwelt"
         )
     }
 }

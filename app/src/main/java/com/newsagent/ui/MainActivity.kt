@@ -121,15 +121,15 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
                 
-                Logger.d("MainActivity", "Fetching headlines...")
-                val newArticles = newsRepository.fetchTopHeadlines()
-                Logger.i("MainActivity", "Fetched ${newArticles.size} articles")
+                Logger.d("MainActivity", "Fetching filtered headlines...")
+                val newArticles = newsRepository.fetchTopHeadlinesFiltered()
+                Logger.i("MainActivity", "Fetched ${newArticles.size} articles after filtering")
                 
                 if (newArticles.isEmpty()) {
-                    Logger.w("MainActivity", "No articles fetched - possibly missing API key")
+                    Logger.w("MainActivity", "No articles fetched - possibly missing API key or filters too restrictive")
                     Toast.makeText(
                         this@MainActivity,
-                        "Keine Nachrichten gefunden. Bitte API-Schlüssel in Einstellungen konfigurieren.",
+                        "Keine Nachrichten gefunden. Bitte API-Schlüssel in Einstellungen konfigurieren oder Filter anpassen.",
                         Toast.LENGTH_LONG
                     ).show()
                     return@launch
@@ -160,6 +160,10 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun openNewsDetail(article: NewsArticle) {
+        // Mark article as read
+        article.isRead = true
+        adapter.notifyDataSetChanged()
+        
         val intent = Intent(this, NewsDetailActivity::class.java).apply {
             putExtra("article_id", article.id)
             putExtra("article_title", article.title)
@@ -191,6 +195,7 @@ class MainActivity : AppCompatActivity() {
         menu?.add(0, 1, 0, "Einstellungen")
         menu?.add(0, 2, 0, "Kostenlose Suche")
         menu?.add(0, 4, 0, "RSS Nachrichten")
+        menu?.add(0, 7, 0, "Alle als ungelesen markieren")
         menu?.add(0, 6, 0, "ℹ️ Info & Hilfe")
         
         // Add rate limit indicators menu item
@@ -257,8 +262,22 @@ class MainActivity : AppCompatActivity() {
                 showInfoDialog()
                 true
             }
+            7 -> {
+                markAllAsUnread()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+    
+    private fun markAllAsUnread() {
+        articles.forEach { it.isRead = false }
+        adapter.notifyDataSetChanged()
+        Toast.makeText(
+            this,
+            "${articles.size} Artikel als ungelesen markiert",
+            Toast.LENGTH_SHORT
+        ).show()
     }
     
     private fun createRateLimitIndicatorsView(): android.view.View {
