@@ -72,6 +72,20 @@ class NewsAdapter(
         }
         holder.title.text = titlePrefix + article.title
         
+        // Set content description for accessibility
+        val contentDescription = buildString {
+            if (article.isRead) {
+                append("Gelesen. ")
+            } else {
+                append("Ungelesen. ")
+            }
+            article.category?.let { category ->
+                append("Kategorie: $category. ")
+            }
+            append(article.title)
+        }
+        holder.itemView.contentDescription = contentDescription
+        
         // Dim read articles
         if (article.isRead) {
             holder.title.alpha = 0.6f

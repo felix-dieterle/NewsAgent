@@ -717,14 +717,12 @@ class NewsRepository(private val context: Context) {
         val articles = fetchTopHeadlines()
         
         // Enrich articles with categories and tags if not already set
-        val enrichedArticles = articles.map { article ->
+        articles.forEach { article ->
             if (article.category == null) {
                 article.category = ArticleFilterHelper.inferCategory(article)
             }
             if (article.tags.isEmpty()) {
-                article.copy(tags = ArticleFilterHelper.extractTags(article))
-            } else {
-                article
+                article.tags = ArticleFilterHelper.extractTags(article)
             }
         }
         
@@ -732,7 +730,7 @@ class NewsRepository(private val context: Context) {
         val preferences = getFilterPreferences()
         
         // Apply filters
-        val filteredArticles = ArticleFilterHelper.filterArticles(enrichedArticles, preferences)
+        val filteredArticles = ArticleFilterHelper.filterArticles(articles, preferences)
         
         // Apply sorting
         val sortedArticles = ArticleFilterHelper.sortArticles(filteredArticles, preferences.sortBy)

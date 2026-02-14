@@ -16,6 +16,28 @@ object ArticleFilterHelper {
     }
     
     /**
+     * Category keyword mappings for content analysis
+     */
+    private val CATEGORY_KEYWORDS = mapOf(
+        "Technologie" to listOf("technologie", "tech", "digital", "ki", "ai", "computer", "software", "internet"),
+        "Politik" to listOf("politik", "regierung", "bundestag", "politiker", "wahl", "gesetz"),
+        "Wirtschaft" to listOf("wirtschaft", "börse", "aktie", "unternehmen", "markt", "inflation", "euro"),
+        "Sport" to listOf("sport", "fußball", "bundesliga", "olympia", "weltmeister"),
+        "Wissenschaft" to listOf("wissenschaft", "forschung", "studie", "universum", "gesundheit", "medizin"),
+        "Kultur" to listOf("kultur", "kunst", "musik", "film", "theater", "buch"),
+        "Umwelt" to listOf("umwelt", "klima", "energie", "natur", "öko")
+    )
+    
+    /**
+     * Important keywords for tag extraction
+     */
+    private val TAG_KEYWORDS = listOf(
+        "ki", "ai", "technologie", "politik", "wirtschaft", "sport",
+        "wissenschaft", "kultur", "umwelt", "klima", "gesundheit",
+        "digital", "europa", "deutschland", "wahl", "bundesliga"
+    )
+    
+    /**
      * Apply filters to a list of articles based on user preferences
      */
     fun filterArticles(
@@ -114,16 +136,14 @@ object ArticleFilterHelper {
             article.description?.let { append(" ").append(it.lowercase()) }
         }
         
-        return when {
-            containsAny(text, listOf("technologie", "tech", "digital", "ki", "ai", "computer", "software", "internet")) -> "Technologie"
-            containsAny(text, listOf("politik", "regierung", "bundestag", "politiker", "wahl", "gesetz")) -> "Politik"
-            containsAny(text, listOf("wirtschaft", "börse", "aktie", "unternehmen", "markt", "inflation", "euro")) -> "Wirtschaft"
-            containsAny(text, listOf("sport", "fußball", "bundesliga", "olympia", "weltmeister")) -> "Sport"
-            containsAny(text, listOf("wissenschaft", "forschung", "studie", "universum", "gesundheit", "medizin")) -> "Wissenschaft"
-            containsAny(text, listOf("kultur", "kunst", "musik", "film", "theater", "buch")) -> "Kultur"
-            containsAny(text, listOf("umwelt", "klima", "energie", "natur", "öko")) -> "Umwelt"
-            else -> "Allgemein"
+        // Check each category's keywords
+        for ((category, keywords) in CATEGORY_KEYWORDS) {
+            if (containsAny(text, keywords)) {
+                return category
+            }
         }
+        
+        return "Allgemein"
     }
     
     /**
@@ -145,13 +165,7 @@ object ArticleFilterHelper {
         }
         
         // Add important keywords as tags
-        val importantKeywords = listOf(
-            "ki", "ai", "technologie", "politik", "wirtschaft", "sport",
-            "wissenschaft", "kultur", "umwelt", "klima", "gesundheit",
-            "digital", "europa", "deutschland", "wahl", "bundesliga"
-        )
-        
-        importantKeywords.forEach { keyword ->
+        TAG_KEYWORDS.forEach { keyword ->
             if (text.contains(keyword)) {
                 tags.add(keyword)
             }
