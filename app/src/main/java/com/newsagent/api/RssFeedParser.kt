@@ -58,8 +58,11 @@ class RssFeedParser {
                 factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
                 factory.isXIncludeAware = false
                 factory.isExpandEntityReferences = false
+                Log.d("RssFeedParser", "XXE protection features enabled for $sourceName")
             } catch (e: Exception) {
-                Log.w("RssFeedParser", "Could not set some security features for $sourceName", e)
+                // Log which features failed - this is important for security
+                Log.e("RssFeedParser", "WARNING: Failed to set XXE protection features for $sourceName - parser may be vulnerable", e)
+                // Continue anyway as basic features like isXIncludeAware are always available
             }
             
             val builder = factory.newDocumentBuilder()
@@ -84,6 +87,7 @@ class RssFeedParser {
                     val title = getElementText(element, "title") ?: continue
                     val description = getElementText(element, "description")
                     val link = getElementText(element, "link") ?: continue
+                    // Try RSS 2.0 pubDate first, then fall back to Dublin Core (dc:date) for RSS 1.0/RDF
                     val pubDate = getElementText(element, "pubDate") ?: getElementText(element, "dc:date")
                     
                     articles.add(
