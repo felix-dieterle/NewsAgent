@@ -57,7 +57,14 @@ class NewsAgentApplication : Application() {
     private fun getAppVersion(): String {
         return try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
-            "${pInfo.versionName} (${pInfo.versionCode})"
+            val versionName = pInfo.versionName ?: "1.0"
+            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode
+            }
+            "$versionName ($versionCode)"
         } catch (e: Exception) {
             "Unknown"
         }
